@@ -72,7 +72,8 @@ MODULE benthos_parms
        sediment_density = 2650.0_benthos_r8, & ! (kg/m3)
        mass_to_vol   = 1.0e3_benthos_r8 * bottom_water_density, & ! mol/kg -> mmol/m3
 !       mass_to_vol   = 1.0e6_benthos_68 * sediment_density, &
-       vol_to_mass   = c1_benthos / mass_to_vol   ! mmol/m3 -> mol/kg
+       vol_to_mass   = c1_benthos / mass_to_vol, &   ! mmol/m3 -> mol/kg
+       mmol_per_kg_water = 5.55556e4_benthos_r8     ! mmol of water/ kg of water
 
   !-----------------------------------------------------------------------------
   !   Fixed biogeochemical parameters
@@ -102,7 +103,33 @@ MODULE benthos_parms
        benthos_phhi_3d_init = 9.0_benthos_r8, & ! higher bound for pH
        CtoP = 106.0_benthos_r8, & ! carbon to phosphorus ratio of sinking organic matter  (117 in BGC)
        NtoP = 16.0_benthos_r8,  & ! carbon to nitrogen ratio of organic sinking matter)
-       ironBoundPFraction = 0.175 ! fraction of bound p to iron
+       ironBoundPFraction = 0.175_benthos_r8, & ! fraction of bound p to iron
+       fracHighlyReactive = 0.49_benthos_r8, & ! fraction of POC flux that is highly reactive
+       fracLessReactive = 0.15_benthos_r8, & ! Fraction of POC flux that is less reactive
+       fracRefractory = 0.36_benthos_r8, &   ! Fraction of POC flux that is refractory
+       fracCalcite = 0.55_benthos_r8 , &     ! Fraction of caco3 flux that is calcite
+       fracAragonite = 0.27_benthos_r8 , &   ! Fraction of caco3 flux that is aragonite
+       fracMgCalcite = 0.18_benthos_r8       ! Fraction of caco3 flux that is 15% Mg calcite
+  
+  ! Secondary Rate Constants from Reed et al 2011
+  real(KIND=benthos_r8), parameter, public :: &       
+      k_s1 = 10000.0_benthos_r8/sec_per_year/mM_umolperL, & !/mmol m3 per s  from /mmol L per year
+      k_s2 = 20000.0_benthos_r8/sec_per_year/mM_umolperL, & !/mmol m3 per s  from per year  800-20,000 is the range
+      k_s3 = 140000.0_benthos_r8/sec_per_year/mM_umolperL, & !/mmol m3 per s  from per year
+      k_s4 = 300.0_benthos_r8/sec_per_year/mM_umolperL, & !/mmol m3 per s from /mmol L per year
+      k_s5 = c1_benthos/sec_per_year/mM_umolperL, &  !/mmol m3 per s from /mmol L per year
+      k_s6 = 160.0_benthos_r8/sec_per_year/mM_umolperL, & !/mmol m3 per s from /mmol L per year
+      k_s7 = 10000000.0_benthos_r8/sec_per_year/mM_umolperL, & !/mmol m3 per s from /mmol L per year
+      k_s8 = c2_benthos/sec_per_year/mM_umolperL, &
+      k_s9 = 20.0_benthos_r8/sec_per_year/mM_umolperL, &
+      k_s10 = 8.0_benthos_r8/sec_per_year/mM_umolperL, &
+      k_s11 = 100.0_benthos_r8/sec_per_year/mM_umolperL, &
+      k_s12 = c10_benthos/sec_per_year/mM_umolperL, &
+      k_s13 = 3.0_benthos_r8/sec_per_year, &  !per year
+      k_s14 = 7.0_benthos_r8/sec_per_year/mM_umolperL, &   !  why is this in per (mmol/m3 s)  Now g/umol/s
+      k_s15 = 0.6_benthos_r8/sec_per_year, & !per year
+      k_s16 = 1.8_benthos_r8/sec_per_year ! per year
+
 
   !-----------------------------------------------------------------------------
   !   functional group
@@ -185,7 +212,20 @@ MODULE benthos_parms
       oceanBottomDepth, &
       oceanBottomTemperature, &
       oceanBottomSalinity, &
-      oceanBottomSilicate   ! and any other bottom values that are needed!!!
+      oceanBottomSilicate, &   ! and any other bottom values that are needed!!!
+      oceanBottomDensity, &
+      oceanBottomPhosphate, &
+      oceanBottomAmmonium, &
+      oceanBottomNitrate, &
+      oceanBottomOxygen, &
+      oceanBottomIron, &
+      oceanBottomDIC, &
+      oceanBottomAlkalinity, &
+      oceanPOCFlux, &
+      oceanPOPFlux, &
+      oceanPONFlux, &
+      oceanParticulateIronFlux, &
+      oceanCalciteFlux
 
   end type benthos_input_type
 
@@ -306,7 +346,10 @@ MODULE benthos_parms
         fauna_biomass_max = 1000.0_benthos_r8, & ! (g/m2) saturation biomass
         fauna_biomass     = 1000.0_benthos_r8, & ! (g/m2) surface biomass use in biodiffusion
         molecular_diff    = 0.035_benthos_r8, & ! (m2/y) molecular diffusivity (Hensen et al 1998 for nitrate)
-        max_bio_diff      = 5.411_benthos_r8    ! (cm2/s) maximum biodiffusivity
+        max_bio_diff      = 5.411_benthos_r8, &    ! (cm2/s) maximum biodiffusivity
+        x_biodiffusion    = p1_benthos, &  ! (m) biodiffusion efolding length schale
+        T_max_biodiffusion = 13.7          ! (oC) maximum biodiffusion temperature dependence
+                                           ! Reed et al 2011
 
   !---------------------------------------------------------------------
   !     Temperature parameters
