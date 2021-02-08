@@ -103,13 +103,15 @@ MODULE benthos_parms
        benthos_phhi_3d_init = 9.0_benthos_r8, & ! higher bound for pH
        CtoP = 106.0_benthos_r8, & ! carbon to phosphorus ratio of sinking organic matter  (117 in BGC)
        NtoP = 16.0_benthos_r8,  & ! carbon to nitrogen ratio of organic sinking matter)
+       CtoP_r = 290.0_benthos_r8, & ! carbon to phosphorus ratio of sinking organic matter  (117 in BGC)
+       NtoP_r = 29.0_benthos_r8,  & ! carbon to nitrogen ratio of organic sinking matter)
        ironBoundPFraction = 0.175_benthos_r8, & ! fraction of bound p to iron
-       fracHighlyReactive = 0.49_benthos_r8, & ! fraction of POC flux that is highly reactive
-       fracLessReactive = 0.15_benthos_r8, & ! Fraction of POC flux that is less reactive
-       fracRefractory = 0.36_benthos_r8, &   ! Fraction of POC flux that is refractory
-       fracCalcite = 0.55_benthos_r8 , &     ! Fraction of caco3 flux that is calcite
-       fracAragonite = 0.27_benthos_r8 , &   ! Fraction of caco3 flux that is aragonite
-       fracMgCalcite = 0.18_benthos_r8       ! Fraction of caco3 flux that is 15% Mg calcite
+       fracHighlyReactive = 0.2_benthos_r8, & ! fraction of POC flux that is highly reactive
+       fracLessReactive = 0.24_benthos_r8, & ! Fraction of POC flux that is less reactive
+       fracRefractory = 0.56_benthos_r8, &   ! Fraction of POC flux that is refractory
+       fracCalcite = 0.50_benthos_r8 , &     ! Fraction of caco3 flux that is calcite
+       fracAragonite = 0.35_benthos_r8 , &   ! Fraction of caco3 flux that is aragonite
+       fracMgCalcite = 0.15_benthos_r8       ! Fraction of caco3 flux that is 15% Mg calcite
   
   ! Secondary Rate Constants from Reed et al 2011
   real(KIND=benthos_r8), parameter, public :: &       
@@ -200,7 +202,7 @@ MODULE benthos_parms
   type, public :: benthos_input_type
 
    real (KIND=benthos_r8), allocatable, dimension(:,:,:) :: &
-      tracerConc, &
+!      tracerConc, &
       benthosTracerBulk
    real (KIND=benthos_r8), allocatable, dimension(:,:) :: &
       PH_PREV_3D, &
@@ -214,6 +216,7 @@ MODULE benthos_parms
       oceanBottomSalinity, &
       oceanBottomSilicate, &   ! and any other bottom values that are needed!!!
       oceanBottomDensity, &
+      oceanBottomPressure, &
       oceanBottomPhosphate, &
       oceanBottomAmmonium, &
       oceanBottomNitrate, &
@@ -259,7 +262,53 @@ MODULE benthos_parms
       elementTransportTendencies
 
    real (KIND=benthos_r8), allocatable, dimension(:,:) :: &
-      elementDeepStorage
+        elementDeepStorage
+   
+    real (KIND=benthos_r8), allocatable, dimension(:) :: &
+      oceanBottomDepth, &        !fields that are actually used in the benthos routine
+      oceanBottomTemperature, &
+      oceanBottomSalinity, &
+      oceanBottomDensity, &
+      oceanBottomPressure, &
+      oceanBottomSilicate, &
+      oceanBottomPhosphate, &
+      oceanBottomAmmonium, &
+      oceanBottomNitrate, &
+      oceanBottomOxygen, &
+      oceanBottomIron, &
+      oceanBottomDIC, &
+      oceanBottomAlkalinity, &
+      oceanBottomCarbonDioxide, &
+      oceanBottomManganese, &
+      oceanBottomHydrogenSulfide, &
+      oceanBottomMethane, &
+      oceanBottomBicarbonate, &
+      oceanBottomCarbonate, &
+      oceanBottomSulfate, &
+      oceanPOCaFlux, & !
+      oceanPOCbFlux, & !
+      oceanPOCcFlux, & !
+      oceanPOPaFlux, & !
+      oceanPOPbFlux, & !
+      oceanPOPcFlux, & !
+      oceanPONaFlux, & !
+      oceanPONbFlux, & !
+      oceanPONcFlux, & !
+      oceanCalciteFlux, & !
+      oceanAragoniteFlux, & !
+      oceanMgCalciteFlux, & !
+      oceanManganeseOxideaFlux, & !
+      oceanManganeseOxidebFlux, & !
+      oceanIronOxyhydroxideaFlux, & !
+      oceanIronOxyhydroxidebFlux, & !
+      oceanIronBoundPhosphorusaFlux, & !
+      oceanIronBoundPhosphorusbFlux, & !
+      oceanPrecipManganeseOxidea, & !
+      oceanPrecipManganeseOxideb, &  !
+      oceanPrecipIronOxyhydroxidea, & !
+      oceanPrecipIronOxyhydroxideb, & !
+      oceanPrecipIronBoundPhosphorusa, & !
+      oceanPrecipIronBoundPhosphorusb !
 
   end type benthos_output_type
 
@@ -325,9 +374,13 @@ MODULE benthos_parms
   !     Vertical transport parameters
   !---------------------------------------------------------------------
 
+   real(KIND=benthos_r8), allocatable, dimension(:,:), public :: &
+        benthosSoluteDiffusivity, & ! 1/s  normalized solute diffusivity D/h^2
+        benthosSoluteDiffusivityI   ! 1/s  normalized solute diffusivity on interface grid
+        
    real(KIND=benthos_r8), allocatable, dimension(:), public :: &
         vertBenthosGridThickI,   & ! normalized thickness of interface vertical grid levels
-        benthosMidPointI,           & ! (m) depth of mid-point of intefrace vertical Grid
+        benthosMidPointI,           & ! (m) depth of mid-point of interface vertical Grid
         benthosGridPointsI,      & ! location of interface grid values (positive down) n+1
         benthosGridPoints,       & ! location of grid values n
         benthosPorosity,         & ! liquid fraction of benthos grid levels
@@ -337,8 +390,9 @@ MODULE benthos_parms
         benthosDiffusivity,      & ! solute diffusivity at benthos grid levels
         benthosDiffusivityI,     & ! solute diffusivity at benthos interface grid levels
         benthosSolidDiffusivity, & ! solid diffusivity at benthos grid levels
-        benthosSolidDiffusivityI   ! solid diffusivity at benthos interface grid levels
-
+        benthosSolidDiffusivityI, &! solid diffusivity at benthos interface grid levels
+        benthosMolecularDiffusivity ! solute molecular diffusivity
+        
   real(KIND=benthos_r8), parameter, public :: &
         porosity_inf   = 0.877_benthos_r8, & ! porosity at the bottom boundary
         porosity_o     = 0.943_benthos_r8, & ! porosity at the benthos surface
@@ -346,9 +400,9 @@ MODULE benthos_parms
         fauna_biomass_max = 1000.0_benthos_r8, & ! (g/m2) saturation biomass
         fauna_biomass     = 1000.0_benthos_r8, & ! (g/m2) surface biomass use in biodiffusion
         molecular_diff    = 0.035_benthos_r8, & ! (m2/y) molecular diffusivity (Hensen et al 1998 for nitrate)
-        max_bio_diff      = 5.411_benthos_r8, &    ! (cm2/s) maximum biodiffusivity
-        x_biodiffusion    = p1_benthos, &  ! (m) biodiffusion efolding length schale
-        T_max_biodiffusion = 13.7          ! (oC) maximum biodiffusion temperature dependence
+        max_bio_diff      = 5.411_benthos_r8, & ! (cm2/s) maximum biodiffusivity
+        x_biodiffusion    = 0.01_benthos_r8, & ! (m) biodiffusion e-folding length scale
+        T_max_biodiffusion = 13.7_benthos_r8    ! (oC) maximum biodiffusion temperature dependence
                                            ! Reed et al 2011
 
   !---------------------------------------------------------------------
