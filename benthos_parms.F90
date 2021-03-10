@@ -59,6 +59,7 @@ MODULE benthos_parms
 
   real(KIND=benthos_r8), parameter, public :: &
        puny          = 1.0e-15_benthos_r8, & ! small number
+       puny16        = 1.0e-16_benthos_r8, & ! small number
        sec_per_day   = 86400.0_benthos_r8,  & ! number of seconds in a day
        sec_per_year  = 31536000_benthos_r8, & ! number pf seconds per year
        days_per_sec  = c1_benthos / sec_per_day,            & ! number of days in a second
@@ -73,7 +74,8 @@ MODULE benthos_parms
        mass_to_vol   = 1.0e3_benthos_r8 * bottom_water_density, & ! mol/kg -> mmol/m3
 !       mass_to_vol   = 1.0e6_benthos_68 * sediment_density, &
        vol_to_mass   = c1_benthos / mass_to_vol, &   ! mmol/m3 -> mol/kg
-       mmol_per_kg_water = 5.55556e4_benthos_r8     ! mmol of water/ kg of water
+       mmol_per_kg_water = 5.55556e4_benthos_r8, &     ! mmol of water/ kg of water
+       degreeC_to_K = 273.15_benthos_r8  
 
   !-----------------------------------------------------------------------------
   !   Fixed biogeochemical parameters
@@ -262,7 +264,9 @@ MODULE benthos_parms
       elementTransportTendencies
 
    real (KIND=benthos_r8), allocatable, dimension(:,:) :: &
-        elementDeepStorage
+      elementDeepStorage, &
+      PH_PREV_3D, &
+      deepStorage
    
     real (KIND=benthos_r8), allocatable, dimension(:) :: &
       oceanBottomDepth, &        !fields that are actually used in the benthos routine
@@ -332,7 +336,11 @@ MODULE benthos_parms
       diag_secondarySourceTend, &
       diag_secondarySinkTend,   &
       diag_carbonateSourceTend, &
-      diag_carbonateSinkTend
+      diag_carbonateSinkTend,   &
+      relErrorTransport, &
+      relErrorReactions, &   ! not using
+      relErrorElements, &
+      relErrorElementsReactions
 
 ! more 2D stuff
     real (KIND=benthos_r8), allocatable, dimension(:,:) :: &
@@ -380,7 +388,9 @@ MODULE benthos_parms
         
    real(KIND=benthos_r8), allocatable, dimension(:), public :: &
         vertBenthosGridThickI,   & ! normalized thickness of interface vertical grid levels
-        benthosMidPointI,           & ! (m) depth of mid-point of interface vertical Grid
+                                   ! used in column summing tracer fields
+        vertBenthosGridThick ,   & ! normalized thickness of vertical grid levels for interior points
+        benthosMidPointI,        & ! (m) depth of mid-point of interface vertical Grid
         benthosGridPointsI,      & ! location of interface grid values (positive down) n+1
         benthosGridPoints,       & ! location of grid values n
         benthosPorosity,         & ! liquid fraction of benthos grid levels
@@ -401,8 +411,8 @@ MODULE benthos_parms
         fauna_biomass     = 1000.0_benthos_r8, & ! (g/m2) surface biomass use in biodiffusion
         molecular_diff    = 0.035_benthos_r8, & ! (m2/y) molecular diffusivity (Hensen et al 1998 for nitrate)
         max_bio_diff      = 5.411_benthos_r8, & ! (cm2/s) maximum biodiffusivity
-        x_biodiffusion    = 0.01_benthos_r8, & ! (m) biodiffusion e-folding length scale
-        T_max_biodiffusion = 13.7_benthos_r8    ! (oC) maximum biodiffusion temperature dependence
+        x_biodiffusion    = 0.01_benthos_r8, & ! 0.005 but use 0.01 to start (m) biodiffusion e-folding length scale
+        T_max_biodiffusion = 286.85_benthos_r8  ! (K) maximum biodiffusion temperature dependence
                                            ! Reed et al 2011
 
   !---------------------------------------------------------------------
@@ -458,7 +468,7 @@ CONTAINS
     useBenthicReactions = .true.
 
     ! correct flux in check_conservation_FCT.m
-    useFluxCorrection = .true.
+    useFluxCorrection = .false.
 
     ! Turn on dissolved biogeochemical tracers in the ocean
     useOceanConc = .true.
