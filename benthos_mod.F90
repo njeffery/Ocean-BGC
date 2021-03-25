@@ -60,7 +60,7 @@
    integer (KIND=benthos_i4), public :: &
       nBenthicTracers, &
       nElements
-
+        
    integer (KIND=benthos_i4), public :: &
       poca_ind, &
       pocb_ind, &
@@ -96,7 +96,14 @@
       caco3a_ind, &
       caco3b_ind, &
       co3_ind, &
-      camgco3_ind
+      camgco3_ind, &
+      totc_ind, &
+      toto_ind, &
+      totn_ind, &
+      tots_ind, &
+      totp_ind, &
+      totmn_ind, &
+      totfe_ind
 
 !*****************************************************************************
 
@@ -187,6 +194,14 @@ contains
    co3_ind     = benthos_indices%co3_ind
    camgco3_ind = benthos_indices%camgco3_ind
 
+   ! element indices
+   totc_ind = benthos_element_indices%carbon_ind
+   toto_ind = benthos_element_indices%oxygen_ind
+   totn_ind = benthos_element_indices%nitrogen_ind
+   totp_ind = benthos_element_indices%phosphorus_ind
+   tots_ind = benthos_element_indices%sulfur_ind
+   totmn_ind = benthos_element_indices%manganese_ind
+   totfe_ind = benthos_element_indices%iron_ind
 !-------------------------------------------------
 ! initialize tracer and element numbers
 !-------------------------------------------------
@@ -332,26 +347,26 @@ contains
    benthos_indices%long_name(camgco3_ind)='Particulate 15% magnesium calcite'
    benthos_indices%units(camgco3_ind)='mmol/kg'
 
-   benthos_element_indices%short_name(benthos_element_indices%carbon_ind)='Carbon'
-   benthos_element_indices%long_name(benthos_element_indices%carbon_ind)='Total carbon'
+   benthos_element_indices%short_name(totc_ind)='Carbon'
+   benthos_element_indices%long_name(totc_ind)='Total carbon'
 
-   benthos_element_indices%short_name(benthos_element_indices%oxygen_ind)='Oxygen'
-   benthos_element_indices%long_name(benthos_element_indices%oxygen_ind)='Total oxygen'
+   benthos_element_indices%short_name(toto_ind)='Oxygen'
+   benthos_element_indices%long_name(toto_ind)='Total oxygen'
 
-   benthos_element_indices%short_name(benthos_element_indices%nitrogen_ind)='Nitrogen'
-   benthos_element_indices%long_name(benthos_element_indices%nitrogen_ind)='Total nitrogen'
+   benthos_element_indices%short_name(totn_ind)='Nitrogen'
+   benthos_element_indices%long_name(totn_ind)='Total nitrogen'
 
-   benthos_element_indices%short_name(benthos_element_indices%phosphorus_ind)='Phosphorus'
-   benthos_element_indices%long_name(benthos_element_indices%phosphorus_ind)='Total phosphorus'
+   benthos_element_indices%short_name(totp_ind)='Phosphorus'
+   benthos_element_indices%long_name(totp_ind)='Total phosphorus'
 
-   benthos_element_indices%short_name(benthos_element_indices%sulfur_ind)='Sulfur'
-   benthos_element_indices%long_name(benthos_element_indices%sulfur_ind)='Total sulfur'
+   benthos_element_indices%short_name(tots_ind)='Sulfur'
+   benthos_element_indices%long_name(tots_ind)='Total sulfur'
 
-   benthos_element_indices%short_name(benthos_element_indices%manganese_ind)='Manganese'
-   benthos_element_indices%long_name(benthos_element_indices%manganese_ind)='Total manganese'
+   benthos_element_indices%short_name(totmn_ind)='Manganese'
+   benthos_element_indices%long_name(totmn_ind)='Total manganese'
 
-   benthos_element_indices%short_name(benthos_element_indices%iron_ind)='Iron'
-   benthos_element_indices%long_name(benthos_element_indices%iron_ind)='Total iron'
+   benthos_element_indices%short_name(totfe_ind)='Iron'
+   benthos_element_indices%long_name(totfe_ind)='Total iron'
 
    ! initialize transport parameters
 
@@ -528,6 +543,7 @@ contains
    allocate(benthosMolecularDiffusivity(nBenthicTracers))
    allocate(benthosSoluteDiffusivityI(nBenthicTracers,nBenthicVertLevels+1))
    allocate(benthosSoluteDiffusivity(nBenthicTracers,nBenthicVertLevels+2))
+   allocate(transport_index(nBenthicTracers))
 
    ! allocate primary reaction matrices
 
@@ -607,7 +623,42 @@ contains
    elementRatios(fe_ind,7)     = c1_benthos
    elementRatios(fes_ind,7)    = c1_benthos*sediment_density
    elementRatios(fes2_ind,7)   = c1_benthos*sediment_density
-   
+
+   ! define the tracers which are solved in the vertical transport
+   transport_index(:) = 0
+   transport_index(1) = poca_ind
+   transport_index(2) = pocb_ind
+   transport_index(3) = pocc_ind
+   transport_index(4) = pona_ind
+   transport_index(5) = ponb_ind
+   transport_index(6) = ponc_ind
+   transport_index(7) = popa_ind
+   transport_index(8) = popb_ind
+   transport_index(9) = popc_ind
+   transport_index(10) = o2_ind
+   transport_index(11) = nh4_ind
+   transport_index(12) = h2po4_ind
+   transport_index(13) = no3_ind
+   transport_index(14) = mno2a_ind
+   transport_index(15) = mno2b_ind
+   transport_index(16) = mn_ind
+   transport_index(17) = feoh3a_ind
+   transport_index(18) = feoh3b_ind
+   transport_index(19) = fe_ind
+   transport_index(20) = fepa_ind
+   transport_index(21) = fepb_ind
+   transport_index(22) = so4_ind
+   transport_index(23) = h2s_ind
+   transport_index(24) = ch4_ind
+   transport_index(25) = dic_ind
+   transport_index(26) = alk_ind
+   transport_index(27) = fes_ind
+   transport_index(28) = fes2_ind
+   transport_index(29) = s_ind
+   transport_index(30) = caco3a_ind
+   transport_index(31) = caco3b_ind
+   transport_index(32) = camgco3_ind
+
    benthosMolecularDiffusivity(:) = c0_benthos
    
    ! Define the benthos variable resolution vertical grid
@@ -1109,7 +1160,7 @@ contains
            (viscosity *Vb(iBenthicTracers)**0.6_benthos_r8)  ! Boudreau et al
       elseif (mo(iBenthicTracers) .gt. c0_benthos) then
          !!!T is in oC and not K!!!
-         benthosMolecularDiffusivity(iBenthicTracers) = (mo(iBenthicTracers) + m1(iBenthicTracers)*temperature) * 1.0e-10_benthos_r8
+         benthosMolecularDiffusivity(iBenthicTracers) = (mo(iBenthicTracers) + m1(iBenthicTracers)*temperature) * 1.0e-9_benthos_r8
       endif
    enddo
    benthosMolecularDiffusivity(alk_ind) = (benthosMolecularDiffusivity(hco3_ind) + benthosMolecularDiffusivity(co3_ind))/c2_benthos
@@ -1585,7 +1636,7 @@ contains
       dhtop, vel, dt, oceanBottomPhosphate, oceanBottomAmmonium, oceanBottomNitrate, oceanBottomOxygen, &
       oceanBottomIron, oceanBottomDIC, oceanBottomAlkalinity, oceanPOCFlux, oceanPONFlux, &
       oceanPOPFlux, oceanParticulateIronFlux, oceanCalciteFlux,benthosSolidPorosityTop, &
-      oceanBottomSilicate, benthos_output, column)
+      oceanBottomSilicate, benthos_output, column,use_ocean_bottom_state)
 
 ! !DESCRIPTION:
 !  compute benthos boundary fluxes and concentrations at the start of each timestep
@@ -1615,6 +1666,9 @@ contains
        oceanParticulateIronFlux, &
        oceanCalciteFlux, &
        benthosSolidPorosityTop
+  
+  logical(KIND=benthos_log), intent(in) :: &
+       use_ocean_bottom_state
 
 ! !INPUT/OUTPUT PARAMETERS:
 
@@ -1656,7 +1710,8 @@ contains
 !EOC
 
   ! pocFluxRate = pocFluxRate_o/sediment_density
-   if (useOceanConc) then
+  
+   if (use_ocean_bottom_state) then
       pocFluxRate = oceanPOCFlux/sediment_density/benthosSolidPorosityTop
       ponFluxRate = oceanPONFlux/sediment_density/benthosSolidPorosityTop
       popFluxRate = oceanPOPFlux/sediment_density/benthosSolidPorosityTop
@@ -1666,7 +1721,7 @@ contains
       pocFluxRate = 6000.0_benthos_r8/sediment_density/sec_per_year
       ponFluxRate = pocFluxRate/CtoP*NtoP
       popFluxRate = pocFluxRate/CtoP
-      ocean_feoh3aFlux = 57.7_benthos_r8/sec_per_year/sediment_density/benthosSolidPorosityTop
+      ocean_feoh3aFlux = 57.7_benthos_r8/sec_per_year/sediment_density
       ocean_caco3Flux = 1000.0_benthos_r8 / sec_per_year/sediment_density
       oceanBottomSilicate = 11.0_benthos_r8   
    end if
@@ -1731,49 +1786,50 @@ contains
    ! concentrations in mmol/m3 (umol/L)
 
    if (useOceanConc) then
-      oceanTracerConc(o2_ind) = oceanBottomOxygen !350.0_benthos_r8  !umol/L (mmol/m3) Reed et al, 2011
-      oceanTracerConc(nh4_ind) = oceanBottomAmmonium !c2_benthos  !umol/L  (Reed)
-      oceanTracerConc(h2po4_ind) = oceanBottomPhosphate !c1_benthos  !umol/L Reed et al. 2011 
-      oceanTracerConc(co2_ind) = 0.125_benthos_r8*mM_umolperL  !mM Krumins et al, 2013
-      oceanTracerConc(no3_ind) = oceanBottomNitrate !6.0_benthos_r8 ! umol/L Reed.
-      oceanTracerConc(mn_ind) = c0_benthos ! umol/L
-      oceanTracerConc(fe_ind) = oceanBottomIron !c1_benthos ! umol/L Reed
-      oceanTracerConc(so4_ind) = 15.5_benthos_r8*mM_umolperL ! mmol/L Reed  to mmol/m3
-      oceanTracerConc(h2s_ind) = c0_benthos ! Reed
-      oceanTracerConc(ch4_ind) = c0_benthos !
-      oceanTracerConc(hco3_ind) = c2_benthos*mM_umolperL  !mM  Krumins et al  (essentially *DIC*) and TA?
-      oceanTracerConc(co3_ind) = 70.0_benthos_r8*oceanBottomDensity !bottom_water_density  ! mmol/m3
-      !umol/kg*density of water 1.027 g/m3  (Sulpis et al 2018)
-      oceanTracerConc(dic_ind) = oceanBottomDIC !oceanTracerConc(co3_ind) + oceanTracerConc(co2_ind) + oceanTracerConc(hco3_ind)
-      oceanTracerConc(alk_ind) = oceanBottomAlkalinity !2306.0_benthos_r8  ! mmol/m3  Krumins et al.
-!      write(*,*)'in updateBenthosBoundaryConditions'
-      !      write(*,*)'oceanTracerConc(no3_ind):',oceanTracerConc(no3_ind)
-   else
-      oceanTracerConc(o2_ind) = 350.0_benthos_r8  !umol/L (mmol/m3) Reed et al, 2011
-      oceanTracerConc(nh4_ind) = c2_benthos  !umol/L  (Reed)
-      oceanTracerConc(h2po4_ind) = c1_benthos  !umol/L Reed et al. 2011 
-      oceanTracerConc(co2_ind) = 0.125_benthos_r8*mM_umolperL  !mM Krumins et al, 2013
-      oceanTracerConc(no3_ind) = 6.0_benthos_r8 ! umol/L Reed.
-      oceanTracerConc(mn_ind) = c0_benthos ! umol/L
-      oceanTracerConc(fe_ind) = c0_benthos ! umol/L !c1_benthos ! umol/L Reed
-      oceanTracerConc(so4_ind) = 15.5_benthos_r8*mM_umolperL ! mmol/L Reed  to mmol/m3
-      oceanTracerConc(h2s_ind) = c0_benthos ! Reed
-      oceanTracerConc(ch4_ind) = c0_benthos !
-      oceanTracerConc(hco3_ind) = c2_benthos*mM_umolperL  !mM  Krumins et al  (essentially *DIC*) and TA?
-      oceanTracerConc(co3_ind) = 70.0_benthos_r8 !*oceanBottomDensity !bottom_water_density  ! mmol/m3
-      !umol/kg*density of water 1.027 g/m3  (Sulpis et al 2018)
-      oceanTracerConc(dic_ind) = oceanTracerConc(co3_ind) + &
-           oceanTracerConc(co2_ind) + oceanTracerConc(hco3_ind)
-      oceanTracerConc(alk_ind) = 2306.0_benthos_r8  ! mmol/m3  Krumins et al.
+      if (use_ocean_bottom_state) then
+         write(*,*)'use_ocean_bottom_state is true:',use_ocean_bottom_state
+         oceanTracerConc(o2_ind) = oceanBottomOxygen !350.0_benthos_r8  !umol/L (mmol/m3) Reed et al, 2011
+         oceanTracerConc(nh4_ind) = oceanBottomAmmonium !c2_benthos  !umol/L  (Reed)
+         oceanTracerConc(h2po4_ind) = oceanBottomPhosphate !c1_benthos  !umol/L Reed et al. 2011 
+         oceanTracerConc(co2_ind) = 0.125_benthos_r8*mM_umolperL  !mM Krumins et al, 2013
+         oceanTracerConc(no3_ind) = oceanBottomNitrate !6.0_benthos_r8 ! umol/L Reed.
+         oceanTracerConc(mn_ind) = c0_benthos ! umol/L
+         oceanTracerConc(fe_ind) = oceanBottomIron !c1_benthos ! umol/L Reed
+         oceanTracerConc(so4_ind) = 15.5_benthos_r8*mM_umolperL ! mmol/L Reed  to mmol/m3
+         oceanTracerConc(h2s_ind) = c0_benthos ! Reed
+         oceanTracerConc(ch4_ind) = c0_benthos !
+         oceanTracerConc(hco3_ind) = c2_benthos*mM_umolperL  !mM  Krumins et al  (essentially *DIC*) and TA?
+         oceanTracerConc(co3_ind) = 70.0_benthos_r8*oceanBottomDensity !bottom_water_density  ! mmol/m3
+         !umol/kg*density of water 1.027 g/m3  (Sulpis et al 2018)
+         oceanTracerConc(dic_ind) = oceanBottomDIC !oceanTracerConc(co3_ind) + oceanTracerConc(co2_ind) + oceanTracerConc(hco3_ind)
+         oceanTracerConc(alk_ind) = oceanBottomAlkalinity !2306.0_benthos_r8  ! mmol/m3  Krumins et al.
+      else
+         oceanTracerConc(o2_ind) = 350.0_benthos_r8  !umol/L (mmol/m3) Reed et al, 2011
+         oceanTracerConc(nh4_ind) = c2_benthos  !umol/L  (Reed)
+         oceanTracerConc(h2po4_ind) = c1_benthos  !umol/L Reed et al. 2011 
+         oceanTracerConc(co2_ind) = 0.125_benthos_r8*mM_umolperL  !mM Krumins et al, 2013
+         oceanTracerConc(no3_ind) = 6.0_benthos_r8 ! umol/L Reed.
+         oceanTracerConc(mn_ind) = c0_benthos ! umol/L
+         oceanTracerConc(fe_ind) = c0_benthos ! umol/L !c1_benthos ! umol/L Reed
+         oceanTracerConc(so4_ind) = 15.5_benthos_r8*mM_umolperL ! mmol/L Reed  to mmol/m3
+         oceanTracerConc(h2s_ind) = c0_benthos ! Reed
+         oceanTracerConc(ch4_ind) = c0_benthos !
+         oceanTracerConc(hco3_ind) = c2_benthos*mM_umolperL  !mM  Krumins et al  (essentially *DIC*)
+         oceanTracerConc(co3_ind) = 70.0_benthos_r8 !*oceanBottomDensity !bottom_water_density  ! mmol/m3
+         !umol/kg*density of water 1.027 g/m3  (Sulpis et al 2018)
+         oceanTracerConc(dic_ind) = oceanTracerConc(co3_ind) + oceanTracerConc(co2_ind) + oceanTracerConc(hco3_ind)
+         oceanTracerConc(alk_ind) = 2306.0_benthos_r8  ! mmol/m3  Krumins et al.
+      end if
    end if
 
    !  make sure dic is consistent
    !initialBenthicTracerBulk(dic_ind,:) = initialBenthicTracerBulk(hco3_ind,:) + initialBenthicTracerBulk(co2_ind,:)  +  initialBenthicTracerBulk(co3_ind,:)
-
    ! define ocean precipitation flux: ignore this right now
-   oceanPrecipFlux(mno2a_ind) = c1_benthos*oceanTracerConc(o2_ind) * k_s2 *  c2_benthos/sediment_density*benthosDepth
-   oceanPrecipFlux(feoh3a_ind) = 0.6_benthos_r8* oceanTracerConc(o2_ind)*k_s3 * 4.0_benthos_r8/sediment_density*benthosDepth
-   oceanPrecipFlux(fepa_ind) = oceanPrecipFlux(feoh3a_ind)*ironBoundPFraction
+   if (useBGCSinkingFlux) then
+      oceanPrecipFlux(mno2a_ind) = 1.05_benthos_r8*oceanTracerConc(o2_ind) * k_s2 *  c2_benthos/sediment_density*benthosDepth
+      oceanPrecipFlux(feoh3a_ind) = 0.19_benthos_r8* oceanTracerConc(o2_ind)*k_s3 * 4.0_benthos_r8/sediment_density*benthosDepth
+      oceanPrecipFlux(fepa_ind) = oceanPrecipFlux(feoh3a_ind)*ironBoundPFraction
+   end if
 
    do iTracers = 1,nBenthicTracers
       totalOceanSolidFlux(iTracers) = (oceanPrecipFlux(iTracers) + oceanSedFlux(iTracers))/benthosDepth
@@ -2049,7 +2105,7 @@ contains
        useBgcSinkingFlux = .false.
        useStepInitialProfiles = .true.
        useBenthicReactions = .false.
-       useFluxCorrection = .true.
+       useFluxCorrection = .false.
        useOceanConc = .true.
        useDeepSource = .false.
        useCarbonateSaturation = .true.
@@ -2068,11 +2124,11 @@ contains
        useBgcSinkingFlux = .true.
        useStepInitialProfiles = .true.
        useBenthicReactions = .false.
-       useFluxCorrection = .true.
+       useFluxCorrection = .false.
        useOceanConc = .true.
        useDeepSource = .false.
-       useCarbonateSaturation = .true.
-       useSecondaryReactions = .true.
+       useCarbonateSaturation = .false.
+       useSecondaryReactions = .false.
 
     CASE(10)
 
@@ -2147,6 +2203,9 @@ contains
  useOceanConc_in = useOceanConc
  useDeepSource_in = useDeepSource
  useConstantDiffusivity_in = useConstantDiffusivity
+
+ fluxCorrect = c0_benthos
+ if (useFluxCorrection) fluxCorrect = c1_benthos 
 
  end subroutine benthos_flags_init
 
@@ -2252,7 +2311,6 @@ contains
        tempR, &
        tempSol, &
        tempS, &
-       rel_error_carbon,&
        benthosTracerBeforeReaction
 
   real(KIND=benthos_r8), dimension(:), allocatable :: &
@@ -2282,7 +2340,9 @@ contains
        bottomsource, &
        C_tot, &
        rel_error, &
-       PH_PREV_3D
+       rel_error_tot, &
+       PH_PREV_3D, &
+       netElementsRelError
 !       netTransport_tend
 
   real(KIND=benthos_r8), dimension(nBenthicTracers) :: &
@@ -2302,10 +2362,10 @@ contains
        oceanElementSedimentation, &
        deepBurial, &
        netElements_start_reactions, &
+       netElements_after_ph_adjustment, &
        netElements_start_reactions_tmp, &
        netElements_end_reactions_tmp, &
-       netElements_end_reactions, &
-       netElementsRelError
+       netElements_end_reactions
 
   real(KIND=benthos_r8), dimension(nCarbonateReactions) :: &
        carbonateRates
@@ -2327,6 +2387,7 @@ contains
   real(KIND=benthos_r8), dimension(:,:), allocatable :: &
        benthosTracerBulk, &    ! local tracer concentration
        initBenthosTracerBulk, &
+       initBenthosTracerBulk_Carbonate, &
        primarySourceTend, &
        primarySinkTend, &
        carbonateSourceTend, &
@@ -2339,6 +2400,7 @@ contains
        iLevels, &
        iTracers, &
        iElements, &
+       ii, &
        subtt
 
   real (KIND=benthos_r8) :: &
@@ -2380,8 +2442,10 @@ contains
    allocate(totalOceanSolidFlux(nBenthicTracers))
    allocate(oceanTracerConc(nBenthicTracers))
    allocate(netElementsStart(nElements))
+   allocate(netElementsRelError(nElements))
    allocate(benthosTracerBulk(nBenthicTracers, nBenthicVertLevels+1))
    allocate(initBenthosTracerBulk(nBenthicTracers, nBenthicVertLevels+1))
+   allocate(initBenthosTracerBulk_Carbonate(nBenthicTracers, nBenthicVertLevels+1))
    allocate(totalColumnTracersInitial(nBenthicTracers))
    allocate(totalColumnTracersFinal(nBenthicTracers))
    allocate(bDiff(nBenthicVertLevels+2))
@@ -2410,6 +2474,7 @@ contains
    allocate(secondarySinkTend(nBenthicTracers,nBenthicVertLevels+1))
    allocate(netReactionTend(nBenthicTracers,nBenthicVertLevels+1))
    allocate(rel_error(nElements))
+   allocate(rel_error_tot(nElements))
    allocate(PH_PREV_3D(nBenthicVertLevels+1))
 
    err = 0
@@ -2423,6 +2488,7 @@ contains
    end do
    netElementsRelError(:) = c0_benthos
    rel_error(:) = c0_benthos
+   rel_error_tot(:) = c0_benthos
 
    !Initialize local variables
    oceanBottomPhosphate  = benthos_input%oceanBottomPhosphate(column)
@@ -2486,6 +2552,13 @@ contains
             write(*,*) 'benthosTracerBulk < 0 at start of SourceSink'
             write(*,*) 'benthosTracerBulk(iTracers,iLevels):',benthosTracerBulk(iTracers,iLevels)
             write(*,*) 'iTracers,iLevels,column:',iTracers,iLevels,column
+            if (benthosTracerBulk(iTracers,iLevels) .gt. -puny) then
+               write(*,*) 'small negative. setting tracer to zero'
+               benthosTracerBulk(iTracers,iLevels) = c0_benthos
+            else
+               err = 1
+               return
+            end if
          end if
       end do
    end do
@@ -2500,7 +2573,7 @@ contains
         FluxSed, dhtop, vel, dt, oceanBottomPhosphate, oceanBottomAmmonium, oceanBottomNitrate, &
         oceanBottomOxygen, oceanBottomIron, oceanBottomDIC, oceanBottomAlkalinity, oceanPOCFlux, &
         oceanPONFlux, oceanPOPFlux, oceanParticulateIronFlux, oceanCalciteFlux,benthosSolidPorosityI(1), &
-        oceanBottomSilicate, benthos_output, column)
+        oceanBottomSilicate, benthos_output, column,use_ocean_bottom_state)
 
    call computeNetElements (netElementsStart, nBenthicVertLevels, benthosTracerBulk,&
         vertBenthosGridThickI)
@@ -2508,7 +2581,9 @@ contains
    ! NJ:Validated
    !write(*,*) 'After computeNetElements ... netElementsStart:',netElementsStart
    
-   do iTracers = 1,nBenthicTracers
+   do ii = 1,nBenthicTracers-3
+      ! co3, co2 and hco3 is transported as dic
+      iTracers = transport_index(ii)
       call sum_benthos_column (totalColumnTracersInitial(iTracers),benthosTracerBulk(iTracers,:),nBenthicVertLevels, vertBenthosGridThickI)
 
       bDiff(nBenthicVertLevels+2) = benthosSoluteDiffusivity(iTracers,nBenthicVertLevels+2)*&
@@ -2538,7 +2613,7 @@ contains
 
          ipor(iLevels) = benthosPorosityI(iLevels)*real(benthos_input%tracerType(iTracers),KIND=benthos_r8) + &
               benthosSolidPorosityI(iLevels)* real((1-benthos_input%tracerType(iTracers)),KIND=benthos_r8)
-         bpor(iLevels) = benthosSolidPorosity(iLevels)*real(benthos_input%tracerType(iTracers),KIND=benthos_r8) + &
+         bpor(iLevels) = benthosPorosity(iLevels)*real(benthos_input%tracerType(iTracers),KIND=benthos_r8) + &
               benthosSolidPorosity(iLevels)*real((1-benthos_input%tracerType(iTracers)),KIND=benthos_r8)
 
          initcons(iLevels) = benthosTracerBulk(iTracers,iLevels)
@@ -2548,11 +2623,9 @@ contains
       C_top_vel(iTracers) = benthosTracerBulk(iTracers,1)
       C_bot_vel(iTracers) = benthosTracerBulk(iTracers,nBenthicVertLevels+1)
       C_top(iTracers) = oceanTracerConc(iTracers)
-      C_bot(iTracers) = c0_benthos
       C_bot(iTracers) = C_bot_vel(iTracers)
-!      C_topSolid = c0_benthos
       C_botm = C_bot(iTracers)
-      C_topm = C_top(iTracers)*real(benthos_input%tracerType(iTracers),KIND=benthos_r8) + C_top_vel(iTracers)*(c1_benthos-real(benthos_input%tracerType(iTracers),KIND=benthos_r8))
+      C_topm = C_top(iTracers)*real(benthos_input%tracerType(iTracers),KIND=benthos_r8) + C_top_vel(iTracers)*real((1-benthos_input%tracerType(iTracers)),KIND=benthos_r8)
 
       totalOceanSolidFluxm = totalOceanSolidFlux(iTracers)
       benthosBottomFluxm = deepBenthosBottomFlux(iTracers)/benthosDepth  ! normalized   positive down
@@ -2561,10 +2634,11 @@ contains
 
       !NJ-TEST: VERIFIED
       test_flag = .false.
-      if (test_flag) then
+      if (test_flag .and. iTracers .eq. 12) then
       write(*,*) 'iTracers:',iTracers
       write(*,*) 'Before compute_FCT_matrix, totalOceanSolidFluxm:', totalOceanSolidFluxm
       write(*,*) 'benthosBottomFluxm:', benthosBottomFluxm
+      write(*,*) 'oceanTracerConc(iTracers):',oceanTracerConc(iTracers)
       write(*,*) 'source(iTracers):', source(iTracers)
       write(*,*) 'bottomsource(iTracers):', bottomsource(iTracers)
       write(*,*) 'C_top_vel(iTracers):', C_top_vel(iTracers)
@@ -2582,6 +2656,8 @@ contains
       write(*,*) 'ipor:', ipor
       write(*,*) 'benthosSolidDiffusivity:', benthosSolidDiffusivity
       write(*,*) 'benthosSolidDiffusivityI:', benthosSolidDiffusivityI
+      err = 1
+      return
       end if
       call compute_FCT_matrix_CN (sbdiag, diag, spdiag, rhs, ML_diag, ML_sbdiag, ML_spdiag, &
            D_sbdiag, D_spdiag, &
@@ -2595,6 +2671,43 @@ contains
 
       call tridiag_solverz (biocons, nBenthicVertLevels+1, sbdiag,  diag, spdiag, rhs)
 
+      test_flag = .false.
+      if (test_flag .and. iTracers .eq. 12) then !biocons(1) .gt. initcons(1) .and. iTracers .eq. 12) then
+      write(*,*) 'iTracers:',iTracers
+      write(*,*) 'after tridiag, totalOceanSolidFluxm:', totalOceanSolidFluxm
+      write(*,*) 'benthosBottomFluxm:', benthosBottomFluxm
+      write(*,*) 'sbdiag:', sbdiag
+      write(*,*) 'spdiag:', spdiag
+      write(*,*) 'diag:', diag
+      write(*,*) 'ML_sbdiag:', ML_sbdiag
+      write(*,*) 'ML_spdiag:', ML_spdiag
+      write(*,*) 'ML_diag:', ML_diag
+      write(*,*) 'rhs:', rhs
+      write(*,*) 'dhtop:', dhtop
+      write(*,*) 'Sink_top_d(iTracers):', Sink_top_d(iTracers)
+      write(*,*) 'Sink_top_s(iTracers):', Sink_top_s(iTracers)
+      write(*,*) 'oceanTracerConc(iTracers):',oceanTracerConc(iTracers)
+      write(*,*) 'source(iTracers):', source(iTracers)
+      write(*,*) 'bottomsource(iTracers):', bottomsource(iTracers)
+      write(*,*) 'C_top_vel(iTracers):', C_top_vel(iTracers)
+      write(*,*) 'C_bot_vel(iTracers):', C_bot_vel(iTracers)
+      write(*,*) 'C_top(iTracers):', C_top(iTracers)
+      write(*,*) 'C_bot(iTracers):', C_bot(iTracers)
+      write(*,*) 'C_topm:', C_topm
+      write(*,*) 'C_botm:', C_botm
+      write(*,*) 'benthos_input%tracerType(iTracers):',benthos_input%tracerType(iTracers)
+      write(*,*) 'biocons:', biocons
+      write(*,*) 'initcons:', initcons
+      write(*,*) 'benthosMolecularDiffusivity(iTracers):', benthosMolecularDiffusivity(iTracers)
+      write(*,*) 'bDiff:', bDiff
+      write(*,*) 'iDiff:', iDiff
+      write(*,*) 'bpor:', bpor
+      write(*,*) 'ipor:', ipor
+      write(*,*) 'benthosSolidDiffusivity:', benthosSolidDiffusivity
+      write(*,*) 'benthosSolidDiffusivityI:', benthosSolidDiffusivityI
+      err = 1
+      return
+      end if
       ! Better
       ! write(*,*) 'after tridiag_solverz, biocons:', biocons
 
@@ -2620,12 +2733,15 @@ contains
                                  biocons, dt, nBenthicVertLevels, &
                                  D_sbdiag, D_spdiag, ML_diag, ML_spdiag, &
                                  ML_sbdiag, vertBenthosGridThickI)
-
+       
+      test_flag = .false.
+      if (test_flag .and. biocons(1) .gt. initcons(1) .and. iTracers .eq. 12) then
+      write(*,*) 'iTracers:',iTracers
+      write(*,*) 'after FCT_corr, initcons:',initcons
+      write(*,*) 'biocons:', biocons
+      end if  
       do iLevels = 1, nBenthicVertLevels+1
-         benthosTracerBulk(iTracers,iLevels) = biocons(iLevels)
-         
-         !initialize ph for reactions
-         PH_PREV_3D(iLevels) = benthos_input%PH_PREV_3D(iLevels, column)
+         benthosTracerBulk(iTracers,iLevels) = max(c0_benthos,biocons(iLevels))
       end do
 
       sum_old = c0_benthos
@@ -2645,76 +2761,56 @@ contains
       call sum_benthos_column &
           (sum_init,initcons,nBenthicVertLevels,vertBenthosGridThickI)
 
-!       if ((abs(sum_new-sum_old) .gt. puny*max(sum_old,sum_new)) .or. &
-!            (minval(biocons) .lt. c0_benthos)   .or.  l_stop) then
       error = max(maxval(biomat_low),maxval(biocons))
       error = max(error, max(sum_new,sum_old))*puny
+
       if ((abs(sum_new-sum_old) .gt. error) .or. &
-          (minval(biocons) .lt. c0_benthos)   .or.  l_stop) then
-          
-          if (iTracers .ne. co3_ind .and. iTracers .ne. hco3_ind .and. &
-             iTracers .ne. co2_ind) then
-             write(*,*) 'Benthic FCT tracer solution failed,iTracers,iLevels', iTracers,iLevels
-             write(*,*) 'sum_new,sum_old:',sum_new,sum_old
-             write(*,*) 'l_stop:',l_stop
-             write(*,*) 'error:',error
-             write(*,*) 'maxval(biocons):',maxval(biocons)
-             write(*,*) 'maxval(biomat_low):',maxval(biomat_low)
-             write(*,*) 'puny*max(sum_old,sum_new):',puny*max(sum_old,sum_new)
-             write(*,*) 'abs(sum_old-sum_new):',abs(sum_old-sum_new)
-             write(*,*) 'iTracers,biocons(:):',iTracers,biocons(:)
-             write(*,*) 'biomat_low:',biomat_low
-             write(*,*) 'iDiff(:):',iDiff(:)
-             write(*,*)  'initcons(:):',initcons(:)
-             write(*,*) 'benthosTracerBulk(iTracers,:):',benthosTracerBulk(iTracers,:)
-             write(*,*) 'dhtop',dhtop
-             write(*,*)'source(iTracers):', source(iTracers)
-             write(*,*)'bottomsource(iTracers):', bottomsource(iTracers)
-             !stop_label = 'zbgc FCT tracer solution failed'
-             err = 1
-             return
-           end if
-        end if
-        if (sum_new .gt. 1e12_benthos_r8 ) then
-             write(*,*)'Benthic tracer blowing up after FCT,iTracers', iTracers
-             write(*,*)'sum_new,sum_old:',sum_new,sum_old
-             write(*,*)'iTracers,biocons(:):',iTracers,biocons(:)
-             write(*,*)'biomat_low:',biomat_low
-             write(*,*)'iDiff(:):',iDiff(:)
-             write(*,*) 'initcons(:):',initcons(:)
-             write(*,*) 'benthosTracerBulk(iTracers,:):',benthosTracerBulk(iTracers,:)
-             write(*,*)'dhtop:',dhtop
-             write(*,*)'source(iTracers):', source(iTracers)
-             write(*,*)'bottomsource(iTracers):', bottomsource(iTracers)
-             !stop_label = 'Benthic tracer blowing up'
-             err = 1
-             return
-        end if
+          (minval(biocons) .lt. c0_benthos)   .or.  l_stop .or. (sum_new .gt. 1e12_benthos_r8)) then
+         write(*,*) 'Benthic FCT tracer solution failed,iTracers,iLevels', iTracers,iLevels
+         write(*,*)'or Benthic tracer blowing up after FCT,iTracers', iTracers
+         write(*,*) 'sum_new,sum_old:',sum_new,sum_old
+         write(*,*) 'l_stop:',l_stop
+         write(*,*) 'error:',error
+         write(*,*) 'maxval(biocons):',maxval(biocons)
+         write(*,*) 'maxval(biomat_low):',maxval(biomat_low)
+         write(*,*) 'puny*max(sum_old,sum_new):',puny*max(sum_old,sum_new)
+         write(*,*) 'abs(sum_old-sum_new):',abs(sum_old-sum_new)
+         write(*,*) 'iTracers,biocons(:):',iTracers,biocons(:)
+         write(*,*) 'biomat_low:',biomat_low
+         write(*,*) 'iDiff(:):',iDiff(:)
+         write(*,*)  'initcons(:):',initcons(:)
+         write(*,*) 'benthosTracerBulk(iTracers,:):',benthosTracerBulk(iTracers,:)
+         write(*,*) 'dhtop',dhtop
+         write(*,*)'source(iTracers):', source(iTracers)
+         write(*,*)'bottomsource(iTracers):', bottomsource(iTracers)
+         !stop_label = 'zbgc FCT tracer solution failed'
+         err = 1
+         return
+       end if
 
-        ! don't include transport tendencies for individual CO2 speciation
-         if (iTracers .ne. co3_ind .and. iTracers .ne. hco3_ind .and. &
-             iTracers .ne. co2_ind) then
-             do iLevels = 1,nBenthicVertLevels+1
-                benthos_output%benthosTransportTendencies(iLevels,column,iTracers) = &
-                   (benthosTracerBulk(iTracers,iLevels) - benthos_input%benthosTracerBulk(iLevels,column,iTracers))/dt
+       ! don't include transport tendencies for individual CO2 speciation
 
-                benthos_output%benthosTendencies(iLevels,column,iTracers) = &
-                   benthos_output%benthosTransportTendencies(iLevels,column,iTracers)
-             end do  ! iLevels
-         end if
+       do iLevels = 1,nBenthicVertLevels+1
+          benthos_output%benthosTransportTendencies(iLevels,column,iTracers) = &
+               (benthosTracerBulk(iTracers,iLevels) - benthos_input%benthosTracerBulk(iLevels,column,iTracers))/dt
+
+          benthos_output%benthosTendencies(iLevels,column,iTracers) = &
+               benthos_output%benthosTransportTendencies(iLevels,column,iTracers)
+      end do  ! iLevels
 
       call sum_benthos_column (C_tot(iTracers),benthosTracerBulk(iTracers,:),nBenthicVertLevels,vertBenthosGridThickI)
       call sum_benthos_column (benthos_diagnostic_fields % diag_netBenthosTransportTend(column,iTracers), &
            benthos_output%benthosTransportTendencies(:,column,iTracers),nBenthicVertLevels, &
            vertBenthosGridThickI)
 
-      benthos_diagnostic_fields % relErrorTransport(column,iTracers) = diffError(iTracers)
+      benthos_diagnostic_fields % relErrorTransport(column,iTracers) = diffError(iTracers)/&
+           (C_tot(iTracers) + c1_benthos)
 
       do iElements = 1,nElements
          netElementsRelError(iElements) = netElementsRelError(iElements) + &
-              elementRatios(iTracers,iElements)*diffError(iTracers)
+              (elementRatios(iTracers,iElements)*diffError(iTracers))**2
       end do
-   end  do !iTracers)
+   end  do !iTracers
    
    call computeElementFluxes (oceanElementExchange, burialElementExchange, oceanSedFluxdt, &
         oceanDiffVelFluxdt, benthosSedFluxdt, benthosDiffVelFluxdt,benthosDepth)
@@ -2746,10 +2842,12 @@ contains
 
    !  make sure there is consistency to start:
    do iLevels = 1, nBenthicVertLevels+1
-!      benthosTracerBulk(dic_ind,iLevels) = benthosTracerBulk(hco3_ind,iLevels) + &
-!           benthosTracerBulk(co2_ind,iLevels)  +  benthosTracerBulk(co3_ind,iLevels)
+      !initialize ph for reactions
+      PH_PREV_3D(iLevels) = benthos_input%PH_PREV_3D(iLevels, column)
+
       do iTracers = 1, nBenthicTracers
          initBenthosTracerBulk(iTracers,iLevels) = benthosTracerBulk(iTracers,iLevels)
+         initBenthosTracerBulk_Carbonate(iTracers,iLevels) = benthosTracerBulk(iTracers,iLevels)
       end do
    end do
 
@@ -2757,42 +2855,106 @@ contains
    !  Save initial mmols of each ion
    ! Count the total mols of the following ions:
    ! In the order: C, O, N, P, S, Mn, Fe
-   !
 
    call computeNetElements (netElements_start_reactions,nBenthicVertLevels,&
         benthos_input%benthosTracerBulk(:,column,:),vertBenthosGridThickI)
 
    if (useBenthicReactions) then
+      
+      !-------------------------------
+      !  Carbonate chemistry
+      !-------------------------------
+
+      ! equilibrium concentrations
+      lcomp_co3_coeff_benthos = .true.
+      lcalc_co2_terms = .true.
+      del_ph = 0.2_benthos_r8
+      phlo_3d_init = 6.0_benthos_r8
+      phhi_3d_init = 9.0_benthos_r8
+
+      !sumC_initial = benthicTracerBulk(dic_ind,iLevels) %benthicTracerBulk(co3_ind,iLevels) + benthicTracerBulk(co2_ind,iLevels) + benthicTracerBulk(hco3_ind,iLevels)
+      !sumco3_initial = benthicTracerBulk(co3_ind,iLevels)
+      !sumco2_initial = benthicTracerBulk(co2_ind,iLevels)
+      !sumhco3_initial = benthicTracerBulk(hco3_ind,iLevels)
+
+      if (useCarbonateSaturation) then
+
+         do iLevels = 1, nBenthicVertLevels+1
+            work3 = c0_benthos
+            work4 = c0_benthos
+
+            if (lcalc_co2_terms) then
+                if (PH_PREV_3D(iLevels) .ne. c0_benthos) then
+                   work1 = PH_PREV_3D(iLevels) - del_ph
+                   work2 = PH_PREV_3D(iLevels) + del_ph
+                else
+                   work1 = phlo_3d_init
+                   work2 = phhi_3d_init
+                end if
+
+                work5 = oceanBottomDepth + benthosMidPointI(iLevels)   ! m
+
+                call comp_CO3terms_benthos (co3_mol,hco3_mol,co2_mol,ph,kw,kb, &
+                   ks,kf,k1p,k2p,k3p,ksi,bt,st,ft,dic,ta,pt,sit, oceanBottomTemperature,  &
+                   oceanBottomSalinity,work5, &
+                   lcomp_co3_coeff_benthos, oceanBottomSilicate, work1, work2, &
+                   benthosTracerBulk(dic_ind,iLevels), benthosTracerBulk(alk_ind,iLevels), &
+                   benthosTracerBulk(h2po4_ind,iLevels), iLevels, oceanBottomDensity)
+
+                work3 = ph   ! do i need this?
+                PH_PREV_3D(iLevels) = ph
+            else
+                co2_mol  = c0_benthos !H2CO3 = 0
+                hco3_mol = c0_benthos !HCO3  = 0
+                co3_mol  = c0_benthos !CO3   = 0
+                PH_PREV_3D(iLevels) = 8.0_benthos_r8
+            end if
+
+            benthosTracerBulk(alk_ind,iLevels) = ta
+!            benthosTracerBulk(h2po4_ind,iLevels) = pt
+!            oceanBottomSilicate = sit
+
+            benthosTracerBulk(co3_ind,iLevels) = co3_mol
+            benthosTracerBulk(co2_ind,iLevels) = co2_mol
+            benthosTracerBulk(hco3_ind,iLevels) = hco3_mol
+            benthosTracerBulk(dic_ind,iLevels) = dic
+
+            ! saturation state
+
+            call  comp_co3_sat_benthos(sat_calc, sat_arag, sat_mgcalc,&
+                K_arag,K_calc,K_mgcalc,oceanBottomTemperature,oceanBottomSalinity,&
+                oceanBottomDepth,oceanMagnesium,co3_mol,oceanBottomDensity)  ! oceanBottomDepth to work5?
+
+            do iTracers = 1, nBenthicTracers
+               initBenthosTracerBulk_Carbonate(iTracers,iLevels) = max(c0_benthos,benthosTracerBulk(iTracers,iLevels))
+            end do
+         end do
+
+         call computeNetElements (netElements_after_ph_adjustment,nBenthicVertLevels,&
+          initBenthosTracerBulk_Carbonate(:,:),vertBenthosGridThickI)
+
+      end if ! useCarbonateSaturation
 
       do while (tooLarge)
          subN = NINT(subN*10.0_benthos_r8)
-         dts = dts/subN
+         dts = dts/real(subN, KIND=benthos_r8)
          tooLarge = .false.
          do iTracers = 1, nBenthicTracers
             do iLevels = 1, nBenthicVertLevels+1
                netReactionTend(iTracers,iLevels) = c0_benthos
-!               benthosTracerBulk(iTracers,iLevels) = benthos_input%benthosTracerBulk(iLevels,column,iTracers)
-                              benthosTracerBulk(iTracers,iLevels) = initBenthosTracerBulk(iTracers,iLevels)
+               benthosTracerBulk(iTracers,iLevels) = initBenthosTracerBulk_Carbonate(iTracers,iLevels)
             end do
          end do
 
          do subtt = 1,subN
             do iLevels = 1,nBenthicVertLevels+1
 
-               !if (iLevels == 1)
-               !netCarbon_carbonate_err(tt) = 0
-               !netco3_carbonate_tend(tt) = 0
-               !netco2_carbonate_tend(tt) = 0
-               !nethco3_carbonate_tend(tt) = 0
-               !avgpH(tt) = 0
-               !end
-
                call computeNetElements (netElements_start_reactions_tmp, nBenthicVertLevels, benthosTracerBulk,vertBenthosGridThickI)
 
                !  Primary reactions
                do iTracers = 1,nBenthicTracers
                   primarySourceTend(iTracers,iLevels) = c0_benthos
-                  primarySinkTend(iTracers,iLevels) = c0_benthos
+                  primarySinkTend(iTracers,iLevels) = c0_benthos                  
                   carbonateSourceTend(iTracers,iLevels) = c0_benthos
                   carbonateSinkTend(iTracers,iLevels) = c0_benthos
                   secondarySourceTend(iTracers,iLevels) = c0_benthos
@@ -2809,94 +2971,18 @@ contains
                     benthosTracerBulk(:,iLevels),primarySourceStoich,&
                     primarySinkStoich,primaryRates,dts,nOMtype)
 
-               !-------------------------------
-               !  Carbonate chemistry
-               !-------------------------------
-
-               ! equilibrium concentrations
-               lcomp_co3_coeff_benthos = .true.
-               lcalc_co2_terms = .true.
-               del_ph = 0.2_benthos_r8
-               phlo_3d_init = 6.0_benthos_r8
-               phhi_3d_init = 9.0_benthos_r8
-
-               !sumC_initial = benthicTracerBulk(dic_ind,iLevels) %benthicTracerBulk(co3_ind,iLevels) + benthicTracerBulk(co2_ind,iLevels) + benthicTracerBulk(hco3_ind,iLevels)
-               !sumco3_initial = benthicTracerBulk(co3_ind,iLevels)
-               !sumco2_initial = benthicTracerBulk(co2_ind,iLevels)
-               !sumhco3_initial = benthicTracerBulk(hco3_ind,iLevels)
-
+               ! carbonate reactions
+               
                if (useCarbonateSaturation) then
 
-                  work3 = c0_benthos
-                  work4 = c0_benthos
-
-                  if (lcalc_co2_terms) then
-                     if (PH_PREV_3D(iLevels) .ne. c0_benthos) then
-                        work1 = PH_PREV_3D(iLevels) - del_ph
-                        work2 = PH_PREV_3D(iLevels) + del_ph
-                     else
-                        work1 = phlo_3d_init
-                        work2 = phhi_3d_init
-                     end if
-
-                     work5 = oceanBottomDepth + benthosMidPointI(iLevels)   ! m
-
-                     call comp_CO3terms_benthos (co3_mol,hco3_mol,co2_mol,ph,kw,kb, &
-                          ks,kf,k1p,k2p,k3p,ksi,bt,st,ft,dic,ta,pt,sit, oceanBottomTemperature,  &
-                          oceanBottomSalinity,work5, &
-                          lcomp_co3_coeff_benthos, oceanBottomSilicate, work1, work2, &
-                          benthosTracerBulk(dic_ind,iLevels), benthosTracerBulk(alk_ind,iLevels), &
-                          benthosTracerBulk(h2po4_ind,iLevels), iLevels, oceanBottomDensity)
-
-                     work3 = ph   ! do i need this?
-                     PH_PREV_3D(iLevels) = ph
-                  else
-                     co2_mol  = c0_benthos !H2CO3 = 0
-                     hco3_mol = c0_benthos !HCO3  = 0
-                     co3_mol  = c0_benthos !CO3   = 0
-                     PH_PREV_3D(iLevels) = 8.0_benthos_r8
-                  end if
-
-                  benthosTracerBulk(alk_ind,iLevels) = ta
-                  benthosTracerBulk(h2po4_ind,iLevels) = pt
-                  oceanBottomSilicate = sit
-
-                  !sumC_final = dic  %co3_mol + co2_mol + hco3_mol
-                  !netCarbon_carbonate_err(tt) = netCarbon_carbonate_err(tt) + (sumC_final-sumC_initial)*zspace(iLevels)*benthosDepth
-                  !sumco3_final = benthicTracerBulk(co3_ind,iLevels)
-                  !sumco2_final = benthicTracerBulk(co2_ind,iLevels)
-                  !sumhco3_final = benthicTracerBulk(hco3_ind,iLevels)
-
-                  !netco3_carbonate_tend(tt) = netco3_carbonate_tend(tt) + (sumco3_final - sumco3_initial)*zspace(iLevels)*benthosDepth
-                  !netco2_carbonate_tend(tt) = netco2_carbonate_tend(tt) + (sumco2_final - sumco2_initial)*zspace(iLevels)*benthosDepth
-                  !nethco3_carbonate_tend(tt) = nethco3_carbonate_tend(tt) + (sumhco3_final - sumhco3_initial)*zspace(iLevels)*benthosDepth
-                  !avgpH(tt) = avgpH(tt) + ph*zspace(iLevels)
-
-                  ! check for conserved carbon
-                  !if (abs(sumC_initial - sumC_final) > accuracy*max(sumC_final,sumC_initial))
-                  !  'carbon not conserved in carbonate chemistry'
-                  !  hco3_mol = max(sumC_initial-co3_mol-co2_mol,0.)
-                  !end
-
-                  benthosTracerBulk(co3_ind,iLevels) = co3_mol
-                  benthosTracerBulk(co2_ind,iLevels) = co2_mol
-                  benthosTracerBulk(hco3_ind,iLevels) = hco3_mol
-                  benthosTracerBulk(dic_ind,iLevels) = dic
-
-                  ! saturation state
-
-                  call  comp_co3_sat_benthos(sat_calc, sat_arag, sat_mgcalc,&
-                       K_arag,K_calc,K_mgcalc,oceanBottomTemperature,oceanBottomSalinity,&
-                       oceanBottomDepth,oceanMagnesium,co3_mol,oceanBottomDensity)  ! oceanBottomDepth to work5?
-
-                  call carbonateRateConstants (carbonateRates, &
-                       benthosTracerBulk(:,iLevels),dts,sat_calc, sat_arag,&
-                       sat_mgcalc,oceanBottomDensity)
+                 call carbonateRateConstants (carbonateRates, &
+                   benthosTracerBulk(:,iLevels),dts,sat_calc, sat_arag,&
+                   sat_mgcalc,oceanBottomDensity)
 
                   call carbonateBenthosReactions (carbonateSourceTend(:,iLevels),carbonateSinkTend(:,iLevels),&
-                      carbonateSourceStoich,carbonateSinkStoich,carbonateRates,dts)
+                    carbonateSourceStoich,carbonateSinkStoich,carbonateRates,dts)
 
-               end if ! useCarbonateSaturation
+               end if
 
                ! Secondary Reactions
 
@@ -2917,9 +3003,6 @@ contains
                   tempSol = c0_benthos
                   tempS = c0_benthos
 
-                  !ipor(iLevels) = iphi(iLevels)*real(benthos_input%tracerType(iTracers),KIND=benthos_r8) +  &
-                  !      iphis(iLevels)*(c1_benthos-real(benthos_input%tracerType(iTracers),KIND=benthos_r8))
-
                   if (benthosTracerBulk(iTracers,iLevels) .ge. puny) then
                      tempR = (primarySinkTend(iTracers,iLevels) + secondarySinkTend(iTracers,iLevels)+&
                           carbonateSinkTend(iTracers,iLevels))/(benthosTracerBulk(iTracers,iLevels) )
@@ -2927,13 +3010,14 @@ contains
                      tempR = c0_benthos
                   end if
 
-
-                  tempS = (primarySourceTend(iTracers,iLevels) + secondarySourceTend(iTracers,iLevels)+carbonateSourceTend(iTracers,iLevels))
+                  tempS = (primarySourceTend(iTracers,iLevels) + &
+                       secondarySourceTend(iTracers,iLevels)+ &
+                       carbonateSourceTend(iTracers,iLevels))
 
                   if (tempR .lt. puny) then
-                     tempSol = benthosTracerBulk(iTracers,iLevels)  + tempS* (c1_benthos - tempR/c2_benthos)
+                     tempSol = max(c0_benthos,benthosTracerBulk(iTracers,iLevels)  + tempS* (c1_benthos - tempR/c2_benthos))
                   else
-                     tempSol = benthosTracerBulk(iTracers,iLevels)*exp(-tempR) + tempS*(c1_benthos-exp(-tempR))/tempR
+                     tempSol = max(c0_benthos,benthosTracerBulk(iTracers,iLevels)*exp(-tempR) + tempS*(c1_benthos-exp(-tempR))/tempR)
                   end if
 
                   trueTend =  (tempSol-benthosTracerBulk(iTracers,iLevels))
@@ -2947,37 +3031,61 @@ contains
                   ! For testing  elemental conservation of reaction set at each iLevels
                   ! cumulative 
 
-                  netReactionTend(iTracers,iLevels) = netReactionTend(iTracers,iLevels) + reactionTendsecondary + reactionTendprimary+ reactionTendcarbonate ! sub over subcycles
+                  netReactionTend(iTracers,iLevels) = netReactionTend(iTracers,iLevels) + trueTend !reactionTendsecondary + reactionTendprimary+ reactionTendcarbonate ! sub over subcycles
 
                   benthosTracerBeforeReaction = benthosTracerBulk(iTracers,iLevels)
                   benthosTracerBulk(iTracers,iLevels) = benthosTracerBulk(iTracers,iLevels) + trueTend
 
                   if (iTracers .eq. nBenthicTracers .and. iLevels .eq. nBenthicVertLevels+1) then
                      call computeNetElements (netElements_end_reactions_tmp,nBenthicVertLevels,benthosTracerBulk,vertBenthosGridThickI)
-                     rel_error_carbon = (netElements_end_reactions_tmp(1) - netElements_start_reactions_tmp(1))/(netElements_end_reactions_tmp(1)+c1_benthos)
-                     do iElements = 1,nElements
-                        rel_error(iElements) = (netElements_end_reactions_tmp(iElements) - netElements_start_reactions(iElements))/(netElements_end_reactions_tmp(iElements) + c1_benthos)
+                     rel_error(totc_ind) = netElements_end_reactions_tmp(totc_ind) - netElements_start_reactions_tmp(totc_ind)
+                     rel_error_tot(totc_ind) = rel_error_tot(totc_ind) + rel_error(totc_ind)
+                     rel_error(totc_ind) = rel_error(totc_ind)/(netElements_end_reactions_tmp(totc_ind) + c1_benthos)
+
+                     do iElements = totp_ind,nElements
+                        rel_error(iElements) = netElements_end_reactions_tmp(iElements) - netElements_start_reactions_tmp(iElements)
+                        rel_error_tot(iElements) = rel_error_tot(iElements) + rel_error(iElements)
+                        rel_error(iElements) = rel_error(iElements)/(netElements_end_reactions_tmp(iElements) + c1_benthos)
                      end do
+                     if ( abs(maxval(rel_error)) .gt. 1.0e-11_benthos_r8 .and. &
+                          .not. tooLarge .and.  (subN .lt. 100.0_benthos_r8)) then
+                        tooLarge = .true. ! subcycle
+                        rel_error_tot(:) = c0_benthos
+                        exit
+                     end if
                   else
-                     rel_error_carbon = c0_benthos
                      rel_error(:) = c0_benthos
                   end if
+                  
+                 ! if (iTracers .eq. 32 .and. subtt .ge. subN) then
+                 !    write(*,*)'dts, dt:',dts, dt
+                 !    write(*,*)'iTracers, iLevels:',iTracers, iLevels
+                 !    write(*,*)'subN:',subN
+                 !    write(*,*)'real(subN, KIND=benthos_r8):',real(subN, KIND=benthos_r8)
+                 !    write(*,*)'carbonateSinkTend(iTracers,iLevels):',carbonateSinkTend(iTracers,iLevels)
+                 !    write(*,*)'carbonateSourceTend(iTracers,iLevels):',carbonateSourceTend(iTracers,iLevels)
+                 !    write(*,*)'benthos_output%benthosTransportTendencies(iLevels,column,iTracers)*dt:', &
+                 !         benthos_output%benthosTransportTendencies(iLevels,column,iTracers)*dt
+                 !    write(*,*)'trueTend:',trueTend
+                 !    write(*,*)'tempR:',tempR
+                 !    write(*,*)'tempS:',tempS
+                 !    write(*,*)'tempSol:',tempSol
+                 !    write(*,*)'rel_error_tot(:)*net_elements:',rel_error_tot(:)
+                 !    write(*,*)'rel_error(:):',rel_error(:)
+                 !    write(*,*)'netElements_end_reactions_tmp(iElements):',netElements_end_reactions_tmp(iElements)
+                 !    write(*,*)'netElements_start_reactions_tmp(iElements):',netElements_start_reactions_tmp(iElements)
+                 !    write(*,*)'netElements_start_reactions(iElements):',netElements_start_reactions(iElements)
+                 !    write(*,*)'netElements_after_ph_adjustment(iElements):',netElements_after_ph_adjustment(iElements)
+                 ! end if
 
-                  if (iTracers .eq. nBenthicTracers .and. abs(maxval(rel_error)) .gt. 1.0e-11_benthos_r8 .and. &
-                       .not. tooLarge .and.  subN .lt. 100.0_benthos_r8) then
-                     tooLarge = .true. ! subcycle
-                     exit
-                  end if
-
-                  if (benthosTracerBulk(iTracers,iLevels) .lt. c0_benthos .and. benthosTracerBulk(iTracers,iLevels) .ge. -puny) then
-
+                 ! if (benthosTracerBulk(iTracers,iLevels) .lt. c0_benthos .and. benthosTracerBulk(iTracers,iLevels) .ge. -puny) then
                      !   'Values Slightly Negative'
-                     benthosTracerBulk(iTracers,iLevels) = c0_benthos
-                  end if
+                 !    benthosTracerBulk(iTracers,iLevels) = c0_benthos
+                 ! end if
 
-                  if (benthosTracerBulk(iTracers,iLevels) .lt. -puny) then
+                  if (benthosTracerBulk(iTracers,iLevels) .lt. c0_benthos) then  !-puny) then
 
-                     write(*,*)'Negative benthic tracers after  reactions'
+                     write(*,*)'Negative benthic tracers after  reactions in benthos_mod.F90'
                      write(*,*)'tempR,tempS, tempSol, benthosTracerBeforeReaction:',tempR,tempS, tempSol, benthosTracerBeforeReaction
                      write(*,*)'tracer index (iTracers,iLevels):',iTracers,iLevels
                      write(*,*)'benthosTracerBulk(iTracers,iLevels):',benthosTracerBulk(iTracers,iLevels)
@@ -3002,9 +3110,10 @@ contains
    call computeNetElements (netElements_end_reactions, nBenthicVertLevels, benthosTracerBulk,vertBenthosGridThickI)
    
    do iTracers = 1, nElements
-      benthos_diagnostic_fields % relErrorElements(column,iTracers) = netElementsRelError(iTracers) + &
-           rel_error(iTracers)
-      benthos_diagnostic_fields % relErrorElementsReactions(column,iTracers) = rel_error(iTracers)
+      benthos_diagnostic_fields % relErrorElements(column,iTracers) = sqrt(netElementsRelError(iTracers) + &
+           rel_error_tot(iTracers)**2)/(netElements_end_reactions(iTracers)+c1_benthos)
+      benthos_diagnostic_fields % relErrorElementsReactions(column,iTracers) = rel_error_tot(iTracers)/&
+           (netElements_end_reactions(iTracers)+c1_benthos)
       benthos_diagnostic_fields % diag_netElements(column,iTracers) = &
            netElements_end_reactions(iTracers)
    end do
@@ -3048,15 +3157,16 @@ contains
    !
    ! call compute conservation and error diagnostics
    !
-
    deallocate(deepBenthosBottomFlux)
    deallocate(oceanSedFlux)
    deallocate(oceanPrecipFlux)
    deallocate(totalOceanSolidFlux)
    deallocate(oceanTracerConc)
    deallocate(netElementsStart)
+   deallocate(netElementsRelError)
    deallocate(benthosTracerBulk)
    deallocate(initBenthosTracerBulk)
+   deallocate(initBenthosTracerBulk_Carbonate)
    deallocate(totalColumnTracersInitial)
    deallocate(totalColumnTracersFinal)
    deallocate(bDiff)
@@ -3070,7 +3180,7 @@ contains
    deallocate(source)
    deallocate(bottomsource)
    deallocate(C_tot)
-!   deallocate(netTransport_tend)
+!   deallocate(netTransport_tend)    
    deallocate(oceanSedFluxdt)
    deallocate(oceanDiffVelFluxdt)
    deallocate(benthosSedFluxdt)
@@ -3083,7 +3193,9 @@ contains
    deallocate(carbonateSinkTend)
    deallocate(secondarySourceTend)
    deallocate(secondarySinkTend)
+   deallocate(netReactionTend)
    deallocate(rel_error)
+   deallocate(rel_error_tot)
    deallocate(PH_PREV_3D)
 
  end subroutine benthos_SourceSink
@@ -3167,7 +3279,11 @@ contains
        dphi_dx, &
        dphi_dx1, &
        dphi_dxN, &
-       gamma
+       gamma, &
+       Sink_top_diag_tmp,   & ! (m/s * dt) diagonal matrix contribution to surface flux
+       Sink_top_spdiag_tmp, & ! (m/s * dt) off-diagonal matrix contribution to surface flux
+       Sink_bot_sbdiag_tmp, & ! (m/s * dt) off-diagonal matrix contribution to bottom flux
+       Sink_bot_diag_tmp      ! (m/s * dt) diagonal matrix contribution to bottom flux
 
   real (KIND=benthos_r8), dimension(nBenthicVertLevels+1) :: &
        K_diag, &
@@ -3187,6 +3303,7 @@ contains
 
   integer (KIND=benthos_i4) :: &
        iLevels
+
 !---------------------------------------------------------------------
 !  Diag (jj) solve for j = 1:nBenthicVertLevels+1
 !  spdiag(j) == (j,j+1) solve for j = 1:nBenthicVertLevels otherwise 0
@@ -3209,8 +3326,6 @@ contains
      D_sbdiag(:) = c0_benthos
      D_diag(:) = c0_benthos
      ML_diag(:) = c0_benthos
-     ML_spdiag(:) = c0_benthos
-     ML_sbdiag(:) = c0_benthos
      spdiag(:) = c0_benthos
      sbdiag(:) = c0_benthos
      diag(:) = c0_benthos
@@ -3243,56 +3358,57 @@ contains
        iDin(iLevels) = iDiff(iLevels) !topz(iLevels) * bDiff(iLevels) + interiorz(iLevels) * iDiff(iLevels)
     end do
 
-    do iLevels = 1 , nBenthicVertLevels+1
+    
+    !iLevels == 1
+    iLevels = 1
+    !dphi_dx = (ipor(iLevels+1)-bpor(iLevels))/&
+    !     (c2_benthos*(benthosGridPointsI(iLevels+1) - benthosGridPointsI(iLevels)))
+    dphi_dx = c0_benthos
+    dphi_dx1 = dphi_dx
 
-       if (iLevels == 1) then
-          !dphi_dx = (ipor(iLevels+1)-bpor(iLevels))/&
-          !     (c2_benthos*(benthosGridPointsI(iLevels+1) - benthosGridPointsI(iLevels)))
-          dphi_dx = c0_benthos
-          dphi_dx1 = dphi_dx
+    K_sbdiag(iLevels)= c0_benthos
+    K_spdiag(iLevels)= -p5_benthos*(min(c0_benthos,vel) +  &
+       bDiff(iLevels)/(ipor(iLevels)*ipor(iLevels+1))*dphi_dx)
+    K_diag(iLevels) =   -max(c0_benthos,vel)- (bDiff(iLevels))/&
+       (dzspace(iLevels)*ipor(iLevels)) &
+       + p5_benthos*(vel + bDiff(iLevels)/ipor(iLevels)**2*dphi_dx)
 
-          K_sbdiag(iLevels)= c0_benthos
-          K_spdiag(iLevels)= -p5_benthos*(min(c0_benthos,vel) +  &
-               bDiff(iLevels)/(ipor(iLevels)*ipor(iLevels+1))*dphi_dx)
-          K_diag(iLevels) =   -max(c0_benthos,vel)- (bDiff(iLevels))/&
-               (dzspace(iLevels)*ipor(iLevels)) &
-              + p5_benthos*(vel + bDiff(iLevels)/ipor(iLevels)**2*dphi_dx)
+    S_sbdiag(iLevels) = c0_benthos
+    S_diag(iLevels) = -bDiff(iLevels+1)/dzspace(iLevels)/ipor(iLevels)
+    S_spdiag(iLevels) = bDiff(iLevels+1)/dzspace(iLevels)/ipor(iLevels+1)
 
-          S_sbdiag(iLevels) = c0_benthos
-          S_diag(iLevels) = -bDiff(iLevels+1)/dzspace(iLevels)/ipor(iLevels)
-          S_spdiag(iLevels) = bDiff(iLevels+1)/dzspace(iLevels)/ipor(iLevels+1)
+    !(iLevels == nBenthicVertLevels+1
+    iLevels = nBenthicVertLevels+1
 
-       else if (iLevels == nBenthicVertLevels+1) then
+    !dphi_dx = (bpor(iLevels+1)-ipor(iLevels-1))/abs(c1_benthos-benthosGridPointsI(iLevels-1))
+    dphi_dx = c0_benthos
+    dphi_dxN = dphi_dx
 
-          !dphi_dx = (bpor(iLevels+1)-ipor(iLevels-1))/abs(c1_benthos-benthosGridPointsI(iLevels-1))
-          dphi_dx = c0_benthos
-          dphi_dxN = dphi_dx
+    K_spdiag(iLevels) = c0_benthos
+    K_sbdiag(iLevels)= p5_benthos*(max(c0_benthos,vel) +  &
+       iDin(iLevels)/(ipor(iLevels)*ipor(iLevels-1))*dphi_dx)
+    K_diag(iLevels) =   - (bDiff(iLevels)) / (dzspace(iLevels-1)*ipor(iLevels)) - &
+       p5_benthos*(vel + iDin(iLevels)/ipor(iLevels)**2*dphi_dx )+min(c0_benthos,vel)
 
-          K_spdiag(iLevels) = c0_benthos
-          K_sbdiag(iLevels)= p5_benthos*(max(c0_benthos,vel) +  &
-               iDin(iLevels)/(ipor(iLevels)*ipor(iLevels-1))*dphi_dx)
-          K_diag(iLevels) =   - (bDiff(iLevels)) / (dzspace(iLevels-1)*ipor(iLevels)) - &
-               p5_benthos*(vel + iDin(iLevels)/ipor(iLevels)**2*dphi_dx )+min(c0_benthos,vel)
+    S_spdiag(iLevels) = c0_benthos
+    S_sbdiag(iLevels) =  bDiff(iLevels)/ipor(iLevels-1)/dzspace(iLevels-1)
+    S_diag(iLevels) = -bDiff(iLevels)/dzspace(iLevels-1)/ipor(iLevels)
 
-          S_spdiag(iLevels) = c0_benthos
-          S_sbdiag(iLevels) =  bDiff(iLevels)/ipor(iLevels-1)/dzspace(iLevels-1)
-          S_diag(iLevels) = -bDiff(iLevels)/dzspace(iLevels-1)/ipor(iLevels)
+    do iLevels = 2 , nBenthicVertLevels
 
-       else
+       ! dphi_dx = (ipor(iLevels+1)-ipor(iLevels-1))/abs(benthosGridPointsI(iLevels+1)-benthosGridPointsI(iLevels-1))
+       dphi_dx = c0_benthos
 
-         ! dphi_dx = (ipor(iLevels+1)-ipor(iLevels-1))/abs(benthosGridPointsI(iLevels+1)-benthosGridPointsI(iLevels-1))
-          dphi_dx = c0_benthos
+       K_sbdiag(iLevels)= p5_benthos*(max(c0_benthos,vel))  + &
+          p5_benthos*( iDin(iLevels)/(ipor(iLevels)*ipor(iLevels-1))*dphi_dx)
+       K_spdiag(iLevels)= -p5_benthos*(min(c0_benthos,vel)) - &
+          p5_benthos*( iDin(iLevels)/(ipor(iLevels)*ipor(iLevels+1))*dphi_dx)
+       K_diag(iLevels)  = -K_sbdiag(iLevels)-K_spdiag(iLevels)
 
-          K_sbdiag(iLevels)= p5_benthos*(max(c0_benthos,vel))  + &
-               p5_benthos*( iDin(iLevels)/(ipor(iLevels)*ipor(iLevels-1))*dphi_dx)
-          K_spdiag(iLevels)= -p5_benthos*(min(c0_benthos,vel)) - &
-               p5_benthos*( iDin(iLevels)/(ipor(iLevels)*ipor(iLevels+1))*dphi_dx)
-          K_diag(iLevels)  = -K_sbdiag(iLevels)-K_spdiag(iLevels)
+       S_diag(iLevels)  = -(bDiff(iLevels)/dzspace(iLevels-1)/ipor(iLevels) + bDiff(iLevels+1)/dzspace(iLevels)/ipor(iLevels))
+       S_sbdiag(iLevels)= bDiff(iLevels)/ipor(iLevels-1)/dzspace(iLevels-1)
+       S_spdiag(iLevels) = bDiff(iLevels+1)/ipor(iLevels+1)/dzspace(iLevels)
 
-          S_diag(iLevels)  = -(bDiff(iLevels)/dzspace(iLevels-1)/ipor(iLevels) + bDiff(iLevels+1)/dzspace(iLevels)/ipor(iLevels))
-          S_sbdiag(iLevels)= bDiff(iLevels)/ipor(iLevels-1)/dzspace(iLevels-1)
-          S_spdiag(iLevels) = bDiff(iLevels+1)/ipor(iLevels+1)/dzspace(iLevels)
-       end if
     end do
 
     ! compute matrix artificial D: D_spdiag, D_diag  (D_spdiag(iLevels) = D_sbdiag(iLevels+1))
@@ -3568,12 +3684,15 @@ subroutine tridiag_solverz(xout, nmat, sbdiagz, diagz, spdiagz, rhsz)
    diffError = (diffCnewCinit - sources)
    diffError_o = (diffCnewCinit-sources_o)    ! estimate of sources from old C_init
 
-   if (useFluxCorrection) then
-      benthosDiffVelFluxdt = benthosDiffVelFluxdt - diffError
-      deep_storage = deep_storage_tmp - diffError
-   else
-      deep_storage = deep_storage_tmp
-   end if
+   benthosDiffVelFluxdt = benthosDiffVelFluxdt - fluxCorrect*diffError
+   deep_storage = deep_storage_tmp - fluxCorrect*diffError
+
+  ! if (useFluxCorrection) then
+  !    benthosDiffVelFluxdt = benthosDiffVelFluxdt - diffError
+  !    deep_storage = deep_storage_tmp - diffError
+  ! else
+  !    deep_storage = deep_storage_tmp
+  ! end if
 
    sources_top_corr = oceanDiffVelFluxdt + oceanSedFluxdt
    sources_bot_corr = -benthosDiffVelFluxdt - benthosSedFluxdt
@@ -3586,55 +3705,40 @@ subroutine tridiag_solverz(xout, nmat, sbdiagz, diagz, spdiagz, rhsz)
    C_max = max(maxval(C_new),maxval(C_init))
    accuracy = puny*C_max
 
-    if (minval(C_new) < c0_benthos) then
-       write(*,*)'Positivity of zbgc low order solution failed: C_new:',C_new
-       write(*,*)'Positivity of zbgc low order solution failed: C_init:',C_init
-       write(*,*)'S_top, S_bot, L_bot_d, L_bot_s, L_top_s, L_top_d:'
-       write(*,*)S_top, S_bot, L_bot_d, L_bot_s, L_top_s, L_top_d
-       write(*,*)'bottomsource, vel, benthosDepth, benthosBottomFluxm, totalOceanSolidFluxm'
-       write(*,*)bottomsource, vel, benthosDepth, benthosBottomFluxm, totalOceanSolidFluxm
-       write(*,*)'dt,sources_top_corr, sources_bot_corr, sources_corr, diffError_corr:'
-       write(*,*)dt,sources_top_corr, sources_bot_corr, sources_corr, diffError_corr
-       write(*,*) 'iTracers,fluxbio:', iTracers,fluxbio
-         l_stop = .true.
-     end if
+   if (minval(C_new) < c0_benthos .or.abs(diffError_corr) .gt. accuracy) then
+      write(*,*)'Positivity of zbgc low order solution failed: C_new:',C_new
+      write(*,*)'OR Conservation of zbgc low order solution failed: diffError (mmol/m2):', diffError
+      write(*,*)'C_init:',C_init
+      write(*,*)'S_top, S_bot, L_bot_d, L_bot_s, L_top_s, L_top_d:'
+      write(*,*) S_top, S_bot, L_bot_d, L_bot_s, L_top_s, L_top_d
+      write(*,*)'bottomsource, vel, benthosDepth, benthosBottomFluxm, totalOceanSolidFluxm'
+      write(*,*) bottomsource, vel, benthosDepth, benthosBottomFluxm, totalOceanSolidFluxm
+      write(*,*)'dt,sources_top_corr, sources_bot_corr, sources_corr, diffError_corr:'
+      write(*,*) dt,sources_top_corr, sources_bot_corr, sources_corr, diffError_corr
+      write(*,*)'sources', sources
+      write(*,*)'sources_o',sources_o
+      write(*,*)'iTracers,fluxbio:', iTracers,fluxbio
+      write(*,*)'diffError_o', diffError_o
+      write(*,*)'diffError_corr', diffError_corr
+      write(*,*)'accuracy:',accuracy
+      write(*,*)'Start deep_storage',deep_storage
+      write(*,*)'intermediate deep_storage',deep_storage_tmp
+      write(*,*)'Final deep_storage',deep_storage
+      write(*,*)'diffCnewCinit (mmol/m2):',diffCnewCinit
+      write(*,*)'oceanSedFluxdt',oceanSedFluxdt
+      write(*,*)'oceanDiffVelFluxdt',oceanDiffVelFluxdt
+      write(*,*)'fluxbio:',fluxbio
+      write(*,*)'bottom final tracer', C_new(nBenthicVertLevels+1)
+      write(*,*)'top final tracer', C_new(1)
+      write(*,*)'bottom init tracer', C_init(nBenthicVertLevels+1)
+      write(*,*)'top init tracer', C_init(1)
+      write(*,*)'vel:',vel
+      write(*,*)'Total initial tracer', C_init_tot
+      write(*,*)'Total final1  tracer', C_new_tot
+      l_stop = .true.
+   end if
 
-     if (abs(diffError_corr) .gt. accuracy) then
-            l_stop = .true.
-            write(*,*) 'Conservation of zbgc low order solution failed: diffError (mmol/m2):', diffError
-            write(*,*) 'diffError_o', diffError_o
-            write(*,*) 'diffError_corr', diffError_corr
-            write(*,*)'accuracy:',accuracy
-            write(*,*)'iTracers',iTracers
-            write(*,*) 'sources', sources
-            write(*,*) 'sources_o',sources_o
-            write(*,*)  'sources_corr', sources_corr
-            write(*,*) 'sources_bot:',sources_bot
-            write(*,*) 'sources_bot_corr:',sources_bot_corr
-            write(*,*) 'sources_bot:',sources_top
-            write(*,*) 'sources_bot_corr:',sources_top_corr
-           write(*,*) 'Start deep_storage',deep_storage
-           write(*,*) 'intermediate deep_storage',deep_storage_tmp
-           write(*,*) 'Final deep_storage',deep_storage
-           write(*,*)   'diffCnewCinit (mmol/m2):',diffCnewCinit
-           write(*,*)   'oceanSedFluxdt',oceanSedFluxdt
-           write(*,*)   'oceanDiffVelFluxdt',oceanDiffVelFluxdt
-           write(*,*)  'totalOceanSolidFluxm,',totalOceanSolidFluxm
-           write(*,*)  'benthosSedFluxdt',benthosSedFluxdt
-           write(*,*)   'S_bot', S_bot
-           write(*,*)   'L_bot_d', L_bot_d
-           write(*,*)    'L_bot_s',L_bot_s
-           write(*,*)  'fluxbio:',fluxbio
-           write(*,*) 'bottom final tracer', C_new(nBenthicVertLevels+1)
-           write(*,*) 'top final tracer', C_new(1)
-           write(*,*) 'bottom init tracer', C_init(nBenthicVertLevels+1)
-           write(*,*) 'top init tracer', C_init(1)
-           write(*,*)   'vel:',vel
-           write(*,*)   'S_top:',S_top
-           write(*,*) 'Total initial tracer', C_init_tot
-           write(*,*) 'Total final1  tracer', C_new_tot
-     end if
-     diffError = diffError_corr/(max(C_new_tot, C_init_tot)+c1_benthos)
+   diffError = diffError_corr !/(max(C_new_tot, C_init_tot)+c1_benthos)
 
    end subroutine check_conservation_FCT
 
@@ -3880,6 +3984,7 @@ subroutine compute_FCT_corr (C_in,  &
              a_spdiag(iLevels) = min(Rplus(iLevels),Rminus(iLevels+1))
 
         a_sbdiag(iLevels+1) = min(Rminus(iLevels+1),Rplus(iLevels))
+
         if (F_sbdiag(iLevels+1) > c0_benthos) &
              a_sbdiag(iLevels+1) = min(Rplus(iLevels+1),Rminus(iLevels))
 
@@ -4047,19 +4152,6 @@ subroutine primaryStoichMatrix (primarySourceStoich, primarySinkStoich, &
 !BOC
 !-----------------------------------------------------------------------------
 !  local variables
-!-----------------------------------------------------------------------------
-!  Constants from Reed et al 2011
-!
-  real (KIND=benthos_r8), parameter :: &
-       k_alpha = 1.63_benthos_r8/sec_per_year, &   ! per year  Labile rate constant for primary redox of OM^a
-       k_beta = 0.0086_benthos_r8/sec_per_year, & ! per year  Semi-labile rate constant for primary redox of OM^b
-       k_ref = c0_benthos, &   ! refractory
-       k_o2 = 20.0_benthos_r8, & ! mmol/m3  half sat/inhibition for O2
-       k_no3 = 4.0_benthos_r8, & ! mmol/m3 half sat/inhibition for NO3
-       k_mno2a = 4.0_benthos_r8, & ! mmol/kg half sat/inhibition for MnO2 (umol/g)
-       k_feoh3a = 65.0_benthos_r8, & ! mmol/kg half sat/inhibition for fe(OH)3
-       k_so4 = 1600.0_benthos_r8, & ! mmol/m3 half sat/inhibition for SO4
-       reductionFractionSO4 = 0.075_benthos_r8 ! reduces redox rates for P5-P6
 
   real(KIND=benthos_r8), dimension(nOMtype) :: &
        k_OM
@@ -4073,8 +4165,6 @@ subroutine primaryStoichMatrix (primarySourceStoich, primarySinkStoich, &
    k_OM = (/k_alpha, k_beta, k_ref/)
    OM = (/ benthosTracerBulkLevel(poca_ind), benthosTracerBulkLevel(pocb_ind), &
         benthosTracerBulkLevel(pocc_ind) /)*sediment_density
-
-
 
    do iType = 1,nOMtype
 
@@ -5495,10 +5585,7 @@ subroutine carbonateRateConstants(carbonateRates,benthosTracerBulkLevels,&
   integer (KIND=benthos_i4) :: iReactions
 
   real (KIND=benthos_r8) :: &
-       k_p1, k_p2, k_p3, & ! mmol/kg/hr (Walter and Morse 1985);  (per mM per y) Krumins et al.
-       n1, n2, n3, &   ! power law
-       inhibition, &   ! inhibition factor of 0.1 to reduce rates relative to experimental result (Krumins et al)
-       sec_per_hour    ! seconds per hour
+       k_p1, k_p2, k_p3  ! mmol/m3/s
 
    !  Constants from Krumins et al.  Something odd about the units
 
@@ -5507,15 +5594,10 @@ subroutine carbonateRateConstants(carbonateRates,benthosTracerBulkLevels,&
    ! k_p3 = 58.0_benthos_r8/sec_per_year/mM_umolperL ! /(mmol/m3)/s from 58 per mM per yr
 
    ! Constants from Walter and Morse (1985) reduced by inhibition factor of 0.1 as in Krumins et al
-   inhibition = 0.1_benthos_r8
-   sec_per_hour = 3600.0_benthos_r8
 
-   k_p1 = 457.1_benthos_r8 * inhibition * sec_per_hour * sediment_density  ! barnacle Balanus
-   k_p2 = 1258.9_benthos_r8 * inhibition * sec_per_hour * sediment_density ! green algae Halimeda
-   k_p3 = 660.69_benthos_r8 * inhibition * sec_per_hour * sediment_density ! foraminifier Peneroplis
-   n1 = 2.74_benthos_r8  ! power law for p1
-   n2 = 2.43_benthos_r8
-   n3 = 3.61_benthos_r8
+   k_p1 = kp1 * inhibition * sec_per_hour * sediment_density  ! barnacle Balanus
+   k_p2 = kp2 * inhibition * sec_per_hour * sediment_density ! green algae Halimeda
+   k_p3 = kp3 * inhibition * sec_per_hour * sediment_density ! foraminifier Peneroplis
 
    do iReactions = 1,nCarbonateReactions
       carbonateRates(iReactions) = c0_benthos

@@ -60,8 +60,9 @@ MODULE benthos_parms
   real(KIND=benthos_r8), parameter, public :: &
        puny          = 1.0e-15_benthos_r8, & ! small number
        puny16        = 1.0e-16_benthos_r8, & ! small number
-       sec_per_day   = 86400.0_benthos_r8,  & ! number of seconds in a day
-       sec_per_year  = 31536000_benthos_r8, & ! number pf seconds per year
+       sec_per_hour  = 3600.0_benthos_r8,  & ! number of secondes per hour
+       sec_per_day   = 86400.0_benthos_r8,  & ! number of seconds per day
+       sec_per_year  = 31536000_benthos_r8, & ! number of seconds per year
        days_per_sec  = c1_benthos / sec_per_day,            & ! number of days in a second
        years_per_sec = c1_benthos / sec_per_year, & ! number of years in a second
        m2percm2      = 0.0001_benthos_r8, &      ! m2 per cm2
@@ -75,7 +76,8 @@ MODULE benthos_parms
 !       mass_to_vol   = 1.0e6_benthos_68 * sediment_density, &
        vol_to_mass   = c1_benthos / mass_to_vol, &   ! mmol/m3 -> mol/kg
        mmol_per_kg_water = 5.55556e4_benthos_r8, &     ! mmol of water/ kg of water
-       degreeC_to_K = 273.15_benthos_r8  
+       degreeC_to_K = 273.15_benthos_r8  , &
+       deg_to_rad = 3.14159265359_benthos_r8/180.0_benthos_r8
 
   !-----------------------------------------------------------------------------
   !   Fixed biogeochemical parameters
@@ -85,6 +87,9 @@ MODULE benthos_parms
        nPrimaryReactions   = 6,  & ! number of primary reactions
        nSecondaryReactions = 16, & ! number of secondary reactions
        nCarbonateReactions = 3     ! number of carbonate dissolution reactions
+
+  integer (KIND=benthos_i4), dimension(:), allocatable, public :: &
+       transport_index  ! contains mole ratios of secondary reaction sources
 
   real(KIND=benthos_r8), dimension(:,:), allocatable, public :: &
        secondarySourceStoich, & ! contains mole ratios of secondary reaction sources
@@ -114,6 +119,20 @@ MODULE benthos_parms
        fracCalcite = 0.50_benthos_r8 , &     ! Fraction of caco3 flux that is calcite
        fracAragonite = 0.35_benthos_r8 , &   ! Fraction of caco3 flux that is aragonite
        fracMgCalcite = 0.15_benthos_r8       ! Fraction of caco3 flux that is 15% Mg calcite
+
+  !-----------------------------------------------------------------------------
+  !  Primary Rate Constants from Reed et al 2011
+
+  real (KIND=benthos_r8), parameter, public :: &
+      k_alpha = 1.63_benthos_r8/sec_per_year, &   ! per year  Labile rate constant for primary redox of OM^a
+      k_beta = 0.0086_benthos_r8/sec_per_year, & ! per year  Semi-labile rate constant for primary redox of OM^b
+      k_ref = c0_benthos, &   ! refractory
+      k_o2 = 20.0_benthos_r8, & ! mmol/m3  half sat/inhibition for O2
+      k_no3 = 4.0_benthos_r8, & ! mmol/m3 half sat/inhibition for NO3
+      k_mno2a = 4.0_benthos_r8, & ! mmol/kg half sat/inhibition for MnO2 (umol/g)
+      k_feoh3a = 65.0_benthos_r8, & ! mmol/kg half sat/inhibition for fe(OH)3
+      k_so4 = 1600.0_benthos_r8, & ! mmol/m3 half sat/inhibition for SO4
+      reductionFractionSO4 = 0.075_benthos_r8 ! reduces redox rates for P5-P6
   
   ! Secondary Rate Constants from Reed et al 2011
   real(KIND=benthos_r8), parameter, public :: &       
@@ -133,8 +152,19 @@ MODULE benthos_parms
       k_s14 = 7.0_benthos_r8/sec_per_year/mM_umolperL, &   !  why is this in per (mmol/m3 s)  Now g/umol/s
       k_s15 = 0.6_benthos_r8/sec_per_year, & !per year
       k_s16 = 1.8_benthos_r8/sec_per_year ! per year
+  
+  ! Carbonate Rate constants
+  ! Constants from Walter and Morse (1985) reduced by inhibition factor of 0.1 as in Krumins et al
 
-
+  real(KIND=benthos_r8), parameter, public :: &
+       inhibition = 0.1_benthos_r8, & ! inhibition factor from Krumins et al
+       kp1 = 457.1_benthos_r8,   & ! barnacle Balanus (per mM per y)
+       kp2 = 1258.9_benthos_r8,  & ! green algae Halimeda (per mM per y)
+       kp3 = 660.69_benthos_r8,  & ! foraminifera Peneroplis (per mM per y)
+       n1 = 2.74_benthos_r8,     & ! power law for barnacle Balanus
+       n2 = 2.43_benthos_r8,     & ! power law for green algae Halimeda
+       n3 = 3.61_benthos_r8 ! power law for foraminifera Peneroplis
+       
   !-----------------------------------------------------------------------------
   !   functional group
   !-----------------------------------------------------------------------------
@@ -362,6 +392,9 @@ MODULE benthos_parms
    integer(KIND=benthos_i4), public :: &
        benthosTestCase
 
+   real (KIND=benthos_i8), public :: &
+       fluxCorrect  ! 1.0 if useFluxCorrection = 1, 0 otherwise
+
    logical(KIND=benthos_log), public :: &
        useCarbonateSaturation,     & ! Turns on carbonate calculations
        useSecondaryReactions,      & ! Compute secondary reactionset
@@ -411,7 +444,7 @@ MODULE benthos_parms
         fauna_biomass     = 1000.0_benthos_r8, & ! (g/m2) surface biomass use in biodiffusion
         molecular_diff    = 0.035_benthos_r8, & ! (m2/y) molecular diffusivity (Hensen et al 1998 for nitrate)
         max_bio_diff      = 5.411_benthos_r8, & ! (cm2/s) maximum biodiffusivity
-        x_biodiffusion    = 0.01_benthos_r8, & ! 0.005 but use 0.01 to start (m) biodiffusion e-folding length scale
+        x_biodiffusion    = 0.0075_benthos_r8, & ! 0.005 but use 0.01 to start (m) biodiffusion e-folding length scale
         T_max_biodiffusion = 286.85_benthos_r8  ! (K) maximum biodiffusion temperature dependence
                                            ! Reed et al 2011
 
