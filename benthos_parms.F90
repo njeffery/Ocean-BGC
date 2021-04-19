@@ -124,7 +124,7 @@ MODULE benthos_parms
   !  Primary Rate Constants from Reed et al 2011
 
   real (KIND=benthos_r8), parameter, public :: &
-      k_alpha = 1.63_benthos_r8/sec_per_year, &   ! per year  Labile rate constant for primary redox of OM^a
+      k_alpha = 1.62_benthos_r8/sec_per_year, &   ! per year  Labile rate constant for primary redox of OM^a
       k_beta = 0.0086_benthos_r8/sec_per_year, & ! per year  Semi-labile rate constant for primary redox of OM^b
       k_ref = c0_benthos, &   ! refractory
       k_o2 = 20.0_benthos_r8, & ! mmol/m3  half sat/inhibition for O2
@@ -132,7 +132,8 @@ MODULE benthos_parms
       k_mno2a = 4.0_benthos_r8, & ! mmol/kg half sat/inhibition for MnO2 (umol/g)
       k_feoh3a = 65.0_benthos_r8, & ! mmol/kg half sat/inhibition for fe(OH)3
       k_so4 = 1600.0_benthos_r8, & ! mmol/m3 half sat/inhibition for SO4
-      reductionFractionSO4 = 0.075_benthos_r8 ! reduces redox rates for P5-P6
+      reductionFractionSO4 = 0.075_benthos_r8, & ! reduces redox rates for P5-P6
+      epsilon_Phosphate = 1.0  ! accelerated phosphate remineralization (2.0 for Arkona Basin)
   
   ! Secondary Rate Constants from Reed et al 2011
   real(KIND=benthos_r8), parameter, public :: &       
