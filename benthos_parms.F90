@@ -62,7 +62,7 @@ MODULE benthos_parms
        puny16        = 1.0e-16_benthos_r8, & ! small number
        sec_per_hour  = 3600.0_benthos_r8,  & ! number of secondes per hour
        sec_per_day   = 86400.0_benthos_r8,  & ! number of seconds per day
-       sec_per_year  = 31536000_benthos_r8, & ! number of seconds per year
+       sec_per_year  = 31536000.0_benthos_r8, & ! number of seconds per year
        days_per_sec  = c1_benthos / sec_per_day,            & ! number of days in a second
        years_per_sec = c1_benthos / sec_per_year, & ! number of years in a second
        m2percm2      = 0.0001_benthos_r8, &      ! m2 per cm2
@@ -410,8 +410,10 @@ MODULE benthos_parms
        useFluxCorrection,          & ! correct flux in check_conservation_FCT.m
        useOceanConc,               & ! Turn on dissolved biogeochemical tracers in the ocean
        useDeepSource,              & ! Turn on deep source from below the active benthos layers
-       useConstantDiffusivity        ! Turn off the depth dependence of diffusivty except no flux
-                                     ! bottom boundary and no flux top boundary for solids
+       useConstantDiffusivity,     & ! Turn off the depth dependence of diffusivty except no flux
+       ! bottom boundary and no flux top boundary for solids
+       useOceanBottomState,        & ! Use the ocean ecosys model to force the benthos
+       useBenthosMonthlyForcing      ! Use data file to force the benthos
   !---------------------------------------------------------------------
   !     Vertical transport parameters
   !---------------------------------------------------------------------

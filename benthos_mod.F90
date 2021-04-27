@@ -1636,7 +1636,7 @@ contains
       dhtop, vel, dt, oceanBottomPhosphate, oceanBottomAmmonium, oceanBottomNitrate, oceanBottomOxygen, &
       oceanBottomIron, oceanBottomDIC, oceanBottomAlkalinity, oceanPOCFlux, oceanPONFlux, &
       oceanPOPFlux, oceanParticulateIronFlux, oceanCalciteFlux,benthosSolidPorosityTop, &
-      oceanBottomSilicate, benthos_output, column,use_ocean_bottom_state)
+      oceanBottomSilicate, oceanBottomManganese, benthos_output, column, config_use_benthos_monthly_forcing)
 
 ! !DESCRIPTION:
 !  compute benthos boundary fluxes and concentrations at the start of each timestep
@@ -1658,6 +1658,7 @@ contains
        oceanBottomNitrate, &
        oceanBottomOxygen, &
        oceanBottomIron, &
+       oceanBottomManganese, &
        oceanBottomDIC, &
        oceanBottomAlkalinity, &
        oceanPOCFlux, &
@@ -1666,9 +1667,9 @@ contains
        oceanParticulateIronFlux, &
        oceanCalciteFlux, &
        benthosSolidPorosityTop
-  
-  logical(KIND=benthos_log), intent(in) :: &
-       use_ocean_bottom_state
+
+  logincal(KIND=benthos_log), intent(in) :: &
+       config_use_benthos_monthly_forcing
 
 ! !INPUT/OUTPUT PARAMETERS:
 
@@ -1711,7 +1712,7 @@ contains
 
   ! pocFluxRate = pocFluxRate_o/sediment_density
   
-   if (use_ocean_bottom_state) then
+   if (useOceanBottomState .or. config_use_benthos_monthly_forcing) then
       pocFluxRate = oceanPOCFlux/sediment_density/benthosSolidPorosityTop
       ponFluxRate = pocFluxRate/CtoP*NtoP
       popFluxRate = pocFluxRate/CtoP
@@ -1757,7 +1758,7 @@ contains
       deepBenthosBottomFlux(h2s_ind) = deepFlux_h2s
    end if
 
-   if (useBGCSinkingFlux) then
+   if (useBGCSinkingFlux .or. config_use_benthos_monthly_forcing) then
       !!!! For testing only
       if (benthosTestCase .eq. 4) then
          oceanSedFlux(poca_ind) = dhtop / dt * 0.0158_benthos_r8
@@ -1788,20 +1789,21 @@ contains
    ! concentrations in mmol/m3 (umol/L)
 
    if (useOceanConc) then
-      if (use_ocean_bottom_state) then
-         write(*,*)'use_ocean_bottom_state is true:',use_ocean_bottom_state
+      if (useOceanBottomState .or. config_use_benthos_monthly_forcing) then
+         write(*,*)'useOceanBottomState is true:',useOceanBottomState
          oceanTracerConc(o2_ind) = oceanBottomOxygen !350.0_benthos_r8  !umol/L (mmol/m3) Reed et al, 2011
          oceanTracerConc(nh4_ind) = oceanBottomAmmonium !c2_benthos  !umol/L  (Reed)
          oceanTracerConc(h2po4_ind) = oceanBottomPhosphate !c1_benthos  !umol/L Reed et al. 2011 
-         oceanTracerConc(co2_ind) = 0.125_benthos_r8*mM_umolperL  !mM Krumins et al, 2013
          oceanTracerConc(no3_ind) = oceanBottomNitrate !6.0_benthos_r8 ! umol/L Reed.
-         oceanTracerConc(mn_ind) = c0_benthos ! umol/L
+         oceanTracerConc(mn_ind) = oceanBottomManganese !c0_benthos ! umol/L
          oceanTracerConc(fe_ind) = oceanBottomIron !c1_benthos ! umol/L Reed
-         oceanTracerConc(so4_ind) = 12.0_benthos_r8*mM_umolperL ! mmol/L Reed  to mmol/m3
+         oceanTracerConc(so4_ind) = 12.0_benthos_r8*mM_umolperL !higher? 28000?   mmol/L Reed  to mmol/m3
          oceanTracerConc(h2s_ind) = c0_benthos ! Reed
          oceanTracerConc(ch4_ind) = c0_benthos !
-         oceanTracerConc(hco3_ind) = c2_benthos*mM_umolperL  !mM  Krumins et al  (essentially *DIC*) and TA?
-         oceanTracerConc(co3_ind) = 70.0e-3_benthos_r8*oceanBottomDensity !bottom_water_density  ! mmol/m3
+         ! these shouldn't matter
+         oceanTracerConc(co2_ind) = c0_benthos !0.125_benthos_r8*mM_umolperL  !mM Krumins et al, 2013
+         oceanTracerConc(hco3_ind) = c0_benthos !c2_benthos*mM_umolperL  !mM  Krumins et al  (essentially *DIC*) and TA?
+         oceanTracerConc(co3_ind) = c0_benthos !70.0e-3_benthos_r8*oceanBottomDensity !bottom_water_density  ! mmol/m3
          !umol/kg*density of water 1.027 g/m3  (Sulpis et al 2018)
          oceanTracerConc(dic_ind) = oceanBottomDIC !oceanTracerConc(co3_ind) + oceanTracerConc(co2_ind) + oceanTracerConc(hco3_ind)
          oceanTracerConc(alk_ind) = oceanBottomAlkalinity !2306.0_benthos_r8  ! mmol/m3  Krumins et al.
@@ -1893,7 +1895,8 @@ contains
             useDepthDependentPorosity_in, useNonZeroDiffusivity_in, useSedimentation_in, &
             useFastSedimentation_in, usePositiveSedimentation_in, useBgcSinkingFlux_in, &
             useStepInitialProfiles_in, useBenthicReactions_in, useFluxCorrection_in, &
-            useOceanConc_in, useDeepSource_in, useConstantDiffusivity_in)
+            useOceanConc_in, useDeepSource_in, useConstantDiffusivity_in, useOceanBottomState_in, &
+            useBenthosMonthlyForcing_in)
 
 ! !DESCRIPTION:
 !  Initialize flags for testcases
@@ -1919,7 +1922,9 @@ contains
        useFluxCorrection_in,         & ! true tracks transport errors in the storage flux
        useOceanConc_in,              & ! false sets ocean concentrations of solutes to zero
        useDeepSource_in,             & ! false sets to zero all deep storage fluxes
-       useConstantDiffusivity_in       ! true removes the depth dependence of the diffusivity
+       useConstantDiffusivity_in,    & ! true removes the depth dependence of the diffusivity
+       useOceanBottomState_in,       & ! Use the ocean biogeochemistry to force the benthos
+       useBenthosMonthlyForcing_in     ! Use data file to force the benthos
 
 ! !OUTPUT PARAMETERS:
 
@@ -1939,7 +1944,9 @@ contains
 !  write(*,*) 'test benthos_flags_init'
 !NJ-END
 
- benthosTestCase = setBenthosFlags
+  benthosTestCase = setBenthosFlags
+  useOceanBottomState = useOceanBottomState_in
+  useBenthosMonthlyForcing = useBenthosMonthlyForcing_in
   
  SELECT CASE (setBenthosFlags)
     CASE(:-1)
@@ -2219,7 +2226,7 @@ contains
  subroutine benthos_SourceSink(benthos_input, benthos_forcing, benthos_indices,&
                            benthos_output, benthos_diagnostic_fields, &
                            nBenthicVertLevels,numBenthicColumnsMax, &
-                           dt,err)
+                           dt,config_use_benthos_monthly_forcing,err)
 
 ! !DESCRIPTION:
 !  Compute time derivatives for benthos tracers
@@ -2238,6 +2245,8 @@ contains
   integer (KIND=benthos_i4), intent(in) :: nBenthicVertLevels, numBenthicColumnsMax
 
   real (KIND=benthos_r8), intent(in) :: dt
+
+  logical (KIND=benthos_log), intent(in) :: config_use_benthos_monthly_forcing
 
 ! !INPUT/OUTPUT PARAMETERS:
 
@@ -2262,7 +2271,6 @@ contains
        tooLarge, &
        lcomp_co3_coeff_benthos, &
        lcalc_co2_terms, &
-       use_ocean_bottom_state, &
        test_flag
 
   real(KIND=benthos_r8) :: &
@@ -2277,6 +2285,7 @@ contains
        oceanBottomAmmonium, &
        oceanBottomNitrate, &
        oceanBottomOxygen, &
+       oceanBottomManganese, &
        oceanBottomIron, &
        oceanBottomDIC, &
        oceanBottomAlkalinity, &
@@ -2499,17 +2508,16 @@ contains
    oceanBottomOxygen  = benthos_input%oceanBottomOxygen(column)
    oceanBottomIron  = benthos_input%oceanBottomIron(column)
    oceanBottomDIC  = benthos_input%oceanBottomDIC(column)
+   oceanBottomManganese = benthos_input%oceanBottomMn(column)
    oceanBottomAlkalinity  = benthos_input%oceanBottomAlkalinity(column)
    oceanPOCFlux  = benthos_input%oceanPOCFlux(column)
-   oceanPONFlux  = benthos_input%oceanPONFlux(column)
-   oceanPOPFlux  = benthos_input%oceanPOPFlux(column)
+   oceanPONFlux  = benthos_input%oceanPOCFlux(column)/CtoP*NtoP
+   oceanPOPFlux  = benthos_input%oceanPOCFlux(column)/CtoP
    oceanParticulateIronFlux  = benthos_input%oceanParticulateIronFlux(column)
    oceanCalciteFlux  = benthos_input%oceanCalciteFlux(column)
    oceanBottomSilicate = benthos_input%oceanBottomSilicate(column)
 
-   ! maybe add a config option
-   use_ocean_bottom_state = .false.
-   if (use_ocean_bottom_state) then
+   if (useOceanBottomState .or. config_use_benthos_monthly_forcing) then
       oceanBottomDepth = benthos_input%oceanBottomDepth(column)
       oceanBottomTemperature = benthos_input%oceanBottomTemperature(column)
       oceanBottomSalinity = benthos_input%oceanBottomSalinity(column)
@@ -2575,7 +2583,7 @@ contains
         FluxSed, dhtop, vel, dt, oceanBottomPhosphate, oceanBottomAmmonium, oceanBottomNitrate, &
         oceanBottomOxygen, oceanBottomIron, oceanBottomDIC, oceanBottomAlkalinity, oceanPOCFlux, &
         oceanPONFlux, oceanPOPFlux, oceanParticulateIronFlux, oceanCalciteFlux,benthosSolidPorosityI(1), &
-        oceanBottomSilicate, benthos_output, column,use_ocean_bottom_state)
+        oceanBottomSilicate, oceanBottomManganese, benthos_output, column, config_use_benthos_monthly_forcing)
 
    call computeNetElements (netElementsStart, nBenthicVertLevels, benthosTracerBulk,&
         vertBenthosGridThickI)
