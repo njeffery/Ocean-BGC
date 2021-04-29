@@ -1668,7 +1668,7 @@ contains
        oceanCalciteFlux, &
        benthosSolidPorosityTop
 
-  logincal(KIND=benthos_log), intent(in) :: &
+  logical(KIND=benthos_log), intent(in) :: &
        config_use_benthos_monthly_forcing
 
 ! !INPUT/OUTPUT PARAMETERS:
@@ -2508,7 +2508,7 @@ contains
    oceanBottomOxygen  = benthos_input%oceanBottomOxygen(column)
    oceanBottomIron  = benthos_input%oceanBottomIron(column)
    oceanBottomDIC  = benthos_input%oceanBottomDIC(column)
-   oceanBottomManganese = benthos_input%oceanBottomMn(column)
+   oceanBottomManganese = benthos_input%oceanBottomManganese(column)
    oceanBottomAlkalinity  = benthos_input%oceanBottomAlkalinity(column)
    oceanPOCFlux  = benthos_input%oceanPOCFlux(column)
    oceanPONFlux  = benthos_input%oceanPOCFlux(column)/CtoP*NtoP

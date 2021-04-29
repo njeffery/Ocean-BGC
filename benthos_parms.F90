@@ -257,6 +257,7 @@ MODULE benthos_parms
       oceanBottomIron, &
       oceanBottomDIC, &
       oceanBottomAlkalinity, &
+      oceanBottomManganese, &
       oceanPOCFlux, &
       oceanPOPFlux, &
       oceanPONFlux, &
