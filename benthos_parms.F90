@@ -117,8 +117,12 @@ MODULE benthos_parms
        fracLessReactive = 0.24_benthos_r8, & ! Fraction of POC flux that is less reactive
        fracRefractory = 0.56_benthos_r8, &   ! Fraction of POC flux that is refractory
        fracCalcite = 0.50_benthos_r8 , &     ! Fraction of caco3 flux that is calcite
-       fracAragonite = 0.35_benthos_r8 , &   ! Fraction of caco3 flux that is aragonite
-       fracMgCalcite = 0.15_benthos_r8       ! Fraction of caco3 flux that is 15% Mg calcite
+       fracAragonite = 0.35_benthos_r8, &    ! Fraction of caco3 flux that is aragonite
+       fracMgCalcite = 0.15_benthos_r8, &    ! Fraction of caco3 flux that is 15% Mg calcite
+       sedFlux1 = 0.87478367_benthos_r8, & ! Middelburg et al (1997) exponent parameter w1 for sediment flux
+       sedFlux2 = 0.00042512_benthos_r8, &   ! as a function of ocean depth.  exponent parameter w2
+       sedFlux3 = 0.033_benthos_r8*years_per_sec ! scale parameter wo ==> result is sediment flux in units of m/y
+                                                 ! to m/s
 
   !-----------------------------------------------------------------------------
   !  Primary Rate Constants from Reed et al 2011

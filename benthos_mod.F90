@@ -1636,7 +1636,8 @@ contains
       dhtop, vel, dt, oceanBottomPhosphate, oceanBottomAmmonium, oceanBottomNitrate, oceanBottomOxygen, &
       oceanBottomIron, oceanBottomDIC, oceanBottomAlkalinity, oceanPOCFlux, oceanPONFlux, &
       oceanPOPFlux, oceanParticulateIronFlux, oceanCalciteFlux,benthosSolidPorosityTop, &
-      oceanBottomSilicate, oceanBottomManganese, benthos_output, column, config_use_benthos_monthly_forcing)
+      oceanBottomSilicate, oceanBottomManganese, benthos_output, column, config_use_benthos_monthly_forcing, &
+      oceanBottomDepth)
 
 ! !DESCRIPTION:
 !  compute benthos boundary fluxes and concentrations at the start of each timestep
@@ -1666,7 +1667,8 @@ contains
        oceanPONFlux, &
        oceanParticulateIronFlux, &
        oceanCalciteFlux, &
-       benthosSolidPorosityTop
+       benthosSolidPorosityTop, &
+       oceanBottomDepth
 
   logical(KIND=benthos_log), intent(in) :: &
        config_use_benthos_monthly_forcing
@@ -1705,7 +1707,8 @@ contains
        ponFluxRate, &
        popFluxRate, &
        ocean_feoh3aFlux, &   ! mmol (m/kg)/s
-       ocean_caco3Flux
+       ocean_caco3Flux, &
+       fluxSed_middelburg  ! Middelburg et al (1997) parameterization
 
 !-----------------------------------------------------------------------
 !EOC
@@ -1733,10 +1736,11 @@ contains
    !  sea bed accumulation rates (ob, Yenisey  0.2-0.7 cm/y
 
    if (useSedimentation) then
+      fluxSed_middelburg = sedFlux3 * 10.0_benthos_r8**(-sedFlux1-sedFlux2*oceanBottomDepth)
       if (useFastSedimentation) then
          fluxSed = 1000.0_benthos_r8*fluxSed_o
       else
-         fluxSed = fluxSed_o
+         fluxSed = fluxSed_middelburg !fluxSed_o
       end if
       if (.not. usePositiveSedimentation) fluxSed = -fluxSed
    else
@@ -1776,8 +1780,11 @@ contains
       oceanSedFlux(ponb_ind) = ponFluxRate*fracLessReactive ! 15% moderately reactive
       oceanSedFlux(ponc_ind) = ponFluxRate*fracRefractory ! 34% nonreactive
       oceanSedFlux(mno2a_ind) = 0.03_benthos_r8/sec_per_year/sediment_density !mmol/m2/y to mmol (m/kg)/s
+      oceanSedFlux(mno2b_ind) = c0_benthos
       oceanSedFlux(feoh3a_ind) = ocean_feoh3aFlux
-      oceanSedFlux(fepa_ind) = oceanSedFlux(feoh3a_ind)*ironBoundPFraction !
+      oceanSedFlux(feoh3b_ind) = c0_benthos
+      oceanSedFlux(fepa_ind) = oceanSedFlux(feoh3a_ind)*ironBoundPFraction
+      oceanSedFlux(fepa_ind) = c0_benthos
       oceanSedFlux(caco3a_ind) = ocean_caco3Flux * fracCalcite
       oceanSedFlux(caco3b_ind) = ocean_caco3Flux * fracAragonite
       oceanSedFlux(camgco3_ind) = ocean_caco3Flux * fracMgCalcite
@@ -1790,14 +1797,13 @@ contains
 
    if (useOceanConc) then
       if (useOceanBottomState .or. config_use_benthos_monthly_forcing) then
-         write(*,*)'useOceanBottomState is true:',useOceanBottomState
          oceanTracerConc(o2_ind) = oceanBottomOxygen !350.0_benthos_r8  !umol/L (mmol/m3) Reed et al, 2011
          oceanTracerConc(nh4_ind) = oceanBottomAmmonium !c2_benthos  !umol/L  (Reed)
          oceanTracerConc(h2po4_ind) = oceanBottomPhosphate !c1_benthos  !umol/L Reed et al. 2011 
          oceanTracerConc(no3_ind) = oceanBottomNitrate !6.0_benthos_r8 ! umol/L Reed.
          oceanTracerConc(mn_ind) = oceanBottomManganese !c0_benthos ! umol/L
          oceanTracerConc(fe_ind) = oceanBottomIron !c1_benthos ! umol/L Reed
-         oceanTracerConc(so4_ind) = 12.0_benthos_r8*mM_umolperL !higher? 28000?   mmol/L Reed  to mmol/m3
+         oceanTracerConc(so4_ind) = 28000.0_benthos_r8 !12.0_benthos_r8*mM_umolperL !higher? 28000?   mmol/L Reed  to mmol/m3
          oceanTracerConc(h2s_ind) = c0_benthos ! Reed
          oceanTracerConc(ch4_ind) = c0_benthos !
          ! these shouldn't matter
@@ -1815,7 +1821,7 @@ contains
          oceanTracerConc(no3_ind) = 6.0_benthos_r8 ! umol/L Reed.
          oceanTracerConc(mn_ind) = c0_benthos ! umol/L
          oceanTracerConc(fe_ind) = c0_benthos ! umol/L !c1_benthos ! umol/L Reed
-         oceanTracerConc(so4_ind) = 12.0_benthos_r8*mM_umolperL ! mmol/L Reed  to mmol/m3
+         oceanTracerConc(so4_ind) = 28000_benthos_r8 !12.0_benthos_r8*mM_umolperL ! mmol/L Reed  to mmol/m3
          oceanTracerConc(h2s_ind) = c0_benthos ! Reed
          oceanTracerConc(ch4_ind) = c0_benthos !
          oceanTracerConc(hco3_ind) = c2_benthos*mM_umolperL  !mM  Krumins et al  (essentially *DIC*)
@@ -2583,7 +2589,8 @@ contains
         FluxSed, dhtop, vel, dt, oceanBottomPhosphate, oceanBottomAmmonium, oceanBottomNitrate, &
         oceanBottomOxygen, oceanBottomIron, oceanBottomDIC, oceanBottomAlkalinity, oceanPOCFlux, &
         oceanPONFlux, oceanPOPFlux, oceanParticulateIronFlux, oceanCalciteFlux,benthosSolidPorosityI(1), &
-        oceanBottomSilicate, oceanBottomManganese, benthos_output, column, config_use_benthos_monthly_forcing)
+        oceanBottomSilicate, oceanBottomManganese, benthos_output, column, config_use_benthos_monthly_forcing, &
+        oceanBottomDepth)
 
    call computeNetElements (netElementsStart, nBenthicVertLevels, benthosTracerBulk,&
         vertBenthosGridThickI)
@@ -2727,7 +2734,7 @@ contains
            biocons, Source_top(iTracers), Source_bot(iTracers), Sink_bot_d(iTracers), &
            Sink_bot_s(iTracers), Sink_top_d(iTracers), Sink_top_s(iTracers), dt, &
            nBenthicVertLevels, bottomsource(iTracers), vel, benthosDepth,        & 
-           iTracers,benthosBottomFluxm,totalOceanSolidFluxm,vertBenthosGridThickI)
+           iTracers,benthosBottomFluxm,totalOceanSolidFluxm,vertBenthosGridThickI, iDiff, oceanBottomTemperature)
 
       if (l_stop) then
          err = 1
@@ -3551,7 +3558,7 @@ subroutine tridiag_solverz(xout, nmat, sbdiagz, diagz, spdiagz, rhsz)
        oceanDiffVelFluxdt, benthosSedFluxdt, benthosDiffVelFluxdt, diffError, sources, &
        C_init, C_new, S_top,  S_bot, L_bot_d, L_bot_s,L_top_d,L_top_s, dt,     &
        nBenthicVertLevels, bottomsource, vel,benthosDepth, iTracers, &
-       benthosBottomFluxm, totalOceanSolidFluxm,vertBenthosGridThickI)
+       benthosBottomFluxm, totalOceanSolidFluxm,vertBenthosGridThickI, iDiff, oceanBottomTemperature)
 
 ! !DESCRIPTION:
 !  Initialize tracegas tracer module.
@@ -3568,7 +3575,8 @@ subroutine tridiag_solverz(xout, nmat, sbdiagz, diagz, spdiagz, rhsz)
   real(KIND=benthos_r8), dimension(:), intent(in) :: &
        C_init, &
        C_new,  &
-       vertBenthosGridThickI
+       vertBenthosGridThickI, &
+       iDiff
 
   real(KIND=benthos_r8), intent(in) :: &
        S_top, &
@@ -3582,7 +3590,8 @@ subroutine tridiag_solverz(xout, nmat, sbdiagz, diagz, spdiagz, rhsz)
        vel, &
        benthosDepth, &
        benthosBottomFluxm, &
-       totalOceanSolidFluxm
+       totalOceanSolidFluxm, &
+       oceanBottomTemperature
 
   ! !INPUT/OUTPUT PARAMETERS:
 
@@ -3696,6 +3705,9 @@ subroutine tridiag_solverz(xout, nmat, sbdiagz, diagz, spdiagz, rhsz)
       write(*,*)'C_init:',C_init
       write(*,*)'S_top, S_bot, L_bot_d, L_bot_s, L_top_s, L_top_d:'
       write(*,*) S_top, S_bot, L_bot_d, L_bot_s, L_top_s, L_top_d
+      write(*,*) 'oceanBottomTemperature:', oceanBottomTemperature
+      write(*,*) 'vertBenthosGridThickI = zspace : ', vertBenthosGridThickI
+      write(*,*) 'iDiff : ', iDiff
       write(*,*)'bottomsource, vel, benthosDepth, benthosBottomFluxm, totalOceanSolidFluxm'
       write(*,*) bottomsource, vel, benthosDepth, benthosBottomFluxm, totalOceanSolidFluxm
       write(*,*)'dt,sources_top_corr, sources_bot_corr, sources_corr, diffError_corr:'
